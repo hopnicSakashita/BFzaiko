@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ icon }}"></i> {{ title }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 加工集計グループマスタ情報{{ form_type }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ form_action }}">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="cprg_id" class="form-label">
+                                    グループID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cprg_id" name="cprg_id" 
+                                       value="{{ cprg.CPRG_ID if cprg else '' }}" maxlength="5" required
+                                       {% if is_edit %}readonly{% endif %}>
+                                <div class="form-text">
+                                    加工集計グループのID（最大5文字）{% if is_edit %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_g_nm" class="form-label">
+                                    グループ名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cprg_g_nm" name="cprg_g_nm" 
+                                       value="{{ cprg.CPRG_G_NM if cprg else '' }}" maxlength="20" required>
+                                <div class="form-text">
+                                    加工集計グループの名称（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_prd_id" class="form-label">
+                                    製品ID <span class="text-danger">*</span>
+                                </label>
+                                {% if is_edit %}
+                                <input type="text" class="form-control" id="cprg_prd_id" name="cprg_prd_id" 
+                                       value="{{ cprg.CPRG_PRD_ID }}" readonly>
+                                <div class="form-text">
+                                    製品ID（変更不可）
+                                </div>
+                                {% else %}
+                                <select class="form-select" id="cprg_prd_id" name="cprg_prd_id" required>
+                                    <option value="">選択してください</option>
+                                    {% for value, label in product_choices %}
+                                    {% if value != '' %}
+                                    <option value="{{ value }}" {% if cprg and cprg.CPRG_PRD_ID == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    関連する製品ID
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_prc_id" class="form-label">
+                                    加工ID <span class="text-danger">*</span>
+                                </label>
+                                {% if is_edit %}
+                                <input type="number" class="form-control" id="cprg_prc_id" name="cprg_prc_id" 
+                                       value="{{ cprg.CPRG_PRC_ID }}" readonly>
+                                <div class="form-text">
+                                    加工ID（変更不可）
+                                </div>
+                                {% else %}
+                                <select class="form-select" id="cprg_prc_id" name="cprg_prc_id" required disabled>
+                                    <option value="">選択してください</option>
+                                </select>
+                                <div class="form-text">
+                                    製品IDを選択すると関連する加工IDが表示されます
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_col_nm" class="form-label">列名</label>
+                                <input type="text" class="form-control" id="cprg_col_nm" name="cprg_col_nm" 
+                                       value="{{ cprg.CPRG_COL_NM or '' if cprg else '' }}" maxlength="20">
+                                <div class="form-text">
+                                    マトリックスの列名（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_row_nm" class="form-label">行名</label>
+                                <input type="text" class="form-control" id="cprg_row_nm" name="cprg_row_nm" 
+                                       value="{{ cprg.CPRG_ROW_NM or '' if cprg else '' }}" maxlength="20">
+                                <div class="form-text">
+                                    マトリックスの行名（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_col_key" class="form-label">列キー</label>
+                                <input type="number" class="form-control" id="cprg_col_key" name="cprg_col_key" 
+                                       value="{{ cprg.CPRG_COL_KEY if cprg else '' }}" min="0" max="99">
+                                <div class="form-text">
+                                    マトリックスの列キー（0-99）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_row_key" class="form-label">行キー</label>
+                                <input type="number" class="form-control" id="cprg_row_key" name="cprg_row_key" 
+                                       value="{{ cprg.CPRG_ROW_KEY if cprg else '' }}" min="0" max="99">
+                                <div class="form-text">
+                                    マトリックスの行キー（0-99）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprg_af_prd_id" class="form-label">加工後製品ID</label>
+                                <select class="form-select" id="cprg_af_prd_id" name="cprg_af_prd_id">
+                                    {% for value, label in product_choices %}
+                                    <option value="{{ value }}" {% if cprg and cprg.CPRG_AF_PRD_ID == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    加工後の製品ID
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ submit_text }}
+                            </button>
+                            <a href="{{ url_for('total.cprg_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if is_edit and cprg %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> {{ cprg.CPRG_ID }}</li>
+                                <li><strong>グループ名:</strong> {{ cprg.CPRG_G_NM }}</li>
+                                <li><strong>製品ID:</strong> {{ cprg.CPRG_PRD_ID }}</li>
+                                <li><strong>加工ID:</strong> {{ cprg.CPRG_PRC_ID }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>マトリックス情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>列名:</strong> {{ cprg.CPRG_COL_NM or '-' }}</li>
+                                <li><strong>行名:</strong> {{ cprg.CPRG_ROW_NM or '-' }}</li>
+                                <li><strong>列キー:</strong> {{ cprg.CPRG_COL_KEY or '-' }}</li>
+                                <li><strong>行キー:</strong> {{ cprg.CPRG_ROW_KEY or '-' }}</li>
+                                <li><strong>加工後製品ID:</strong> {{ cprg.CPRG_AF_PRD_ID or '-' }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if not is_edit %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>ハードコート加工集計グループ</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> HC001</li>
+                                <li><strong>グループ名:</strong> ハードコート集計</li>
+                                <li><strong>製品ID:</strong> PRD01（ノンコート製品）</li>
+                                <li><strong>加工ID:</strong> 1001（ハードコート加工）</li>
+                                <li><strong>列名:</strong> サイズ</li>
+                                <li><strong>行名:</strong> 色</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>グラデーション加工集計グループ</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> GD001</li>
+                                <li><strong>グループ名:</strong> グラデーション集計</li>
+                                <li><strong>製品ID:</strong> PRD02（ベース製品）</li>
+                                <li><strong>加工ID:</strong> 1002（グラデーション加工）</li>
+                                <li><strong>列名:</strong> 仕様</li>
+                                <li><strong>行名:</strong> カラー</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const cprgIdInput = document.getElementById('cprg_id');
+    const cprgGNmInput = document.getElementById('cprg_g_nm');
+    const cprgPrdIdInput = document.getElementById('cprg_prd_id');
+    const cprgPrcIdInput = document.getElementById('cprg_prc_id');
+    const cprgColKeyInput = document.getElementById('cprg_col_key');
+    const cprgRowKeyInput = document.getElementById('cprg_row_key');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // グループIDのバリデーション
+        if (!cprgIdInput.value.trim()) {
+            showError(cprgIdInput, 'グループIDは必須です。');
+            isValid = false;
+        } else if (cprgIdInput.value.length > 5) {
+            showError(cprgIdInput, 'グループIDは5文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprgIdInput);
+        }
+        
+        // グループ名のバリデーション
+        if (!cprgGNmInput.value.trim()) {
+            showError(cprgGNmInput, 'グループ名は必須です。');
+            isValid = false;
+        } else if (cprgGNmInput.value.length > 20) {
+            showError(cprgGNmInput, 'グループ名は20文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprgGNmInput);
+        }
+        
+        // 製品IDのバリデーション
+        if (!cprgPrdIdInput.value) {
+            showError(cprgPrdIdInput, '製品IDは必須です。');
+            isValid = false;
+        } else {
+            clearError(cprgPrdIdInput);
+        }
+        
+        // 加工IDのバリデーション
+        if (!cprgPrcIdInput.value) {
+            showError(cprgPrcIdInput, '加工IDは必須です。');
+            isValid = false;
+        } else {
+            clearError(cprgPrcIdInput);
+        }
+        
+        // 列キーのバリデーション
+        if (cprgColKeyInput.value && (isNaN(cprgColKeyInput.value) || cprgColKeyInput.value < 0 || cprgColKeyInput.value > 99)) {
+            showError(cprgColKeyInput, '列キーは0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprgColKeyInput);
+        }
+        
+        // 行キーのバリデーション
+        if (cprgRowKeyInput.value && (isNaN(cprgRowKeyInput.value) || cprgRowKeyInput.value < 0 || cprgRowKeyInput.value > 99)) {
+            showError(cprgRowKeyInput, '行キーは0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprgRowKeyInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+
+    // 製品ID選択時に加工IDリストを動的に取得（新規作成時のみ）
+    {% if not is_edit %}
+    if (cprgPrdIdInput && cprgPrcIdInput) {
+        function setProcessChoices(prdId) {
+            cprgPrcIdInput.innerHTML = '';
+            cprgPrcIdInput.disabled = true;
+            
+            // デフォルトオプションを追加
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = '選択してください';
+            cprgPrcIdInput.appendChild(defaultOpt);
+            
+            if (!prdId || prdId === '') {
+                return;
+            }
+            
+            fetch(`/total/api/cprg/process_choices/${prdId}`)
+                .then(res => res.json())
+                .then(data => {
+                    cprgPrcIdInput.innerHTML = '';
+                    // デフォルトオプションを再追加
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = '';
+                    defaultOpt.textContent = '選択してください';
+                    cprgPrcIdInput.appendChild(defaultOpt);
+                    
+                    if (data.success && data.choices.length > 1) { // デフォルトオプション以外がある場合
+                        data.choices.slice(1).forEach(([value, label]) => {
+                            const opt = document.createElement('option');
+                            opt.value = value;
+                            opt.textContent = label;
+                            cprgPrcIdInput.appendChild(opt);
+                        });
+                        cprgPrcIdInput.disabled = false;
+                    } else {
+                        cprgPrcIdInput.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('API error:', error);
+                    cprgPrcIdInput.disabled = true;
+                });
+        }
+        
+        // 初期状態を設定
+        setProcessChoices(cprgPrdIdInput.value);
+        
+        // 製品ID変更時のイベントリスナー
+        cprgPrdIdInput.addEventListener('change', function() {
+            setProcessChoices(this.value);
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %} 

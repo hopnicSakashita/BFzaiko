@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "バーコードマスタ編集" if cbcd else "バーコードマスタ新規作成" }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ "bi-pencil-square" if cbcd else "bi-plus-circle" }}"></i> 
+                {{ "バーコードマスタ編集" if cbcd else "バーコードマスタ新規作成" }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> バーコードマスタ情報{{ "編集" if cbcd else "入力" }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('master_cbcd_edit', cbcd_id=cbcd.CBCD_ID) if cbcd else url_for('master_cbcd_create') }}" id="createForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="cbcd_prd_id" class="form-label">
+                                    製品ID <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="cbcd_prd_id" name="cbcd_prd_id" required
+                                        {% if cbcd %}disabled{% endif %}>
+                                    <option value="">選択してください</option>
+                                    {% if prd_list %}
+                                        {% for prd in prd_list %}
+                                        <option value="{{ prd.PRD_ID }}" 
+                                                {% if cbcd and cbcd.CBCD_PRD_ID == prd.PRD_ID %}selected{% endif %}>
+                                            {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                {% if cbcd %}
+                                <input type="hidden" name="cbcd_prd_id" value="{{ cbcd.CBCD_PRD_ID }}">
+                                {% endif %}
+                                <div class="form-text">
+                                    製品を選択{% if cbcd %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cbcd_to" class="form-label">
+                                    出荷先 <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="cbcd_to" name="cbcd_to" required
+                                        {% if cbcd %}disabled{% endif %}>
+                                    <option value="">選択してください</option>
+                                    {% if cztr_list %}
+                                        {% for cztr in cztr_list %}
+                                        <option value="{{ cztr.CZTR_ID }}" 
+                                                {% if cbcd and cbcd.CBCD_TO == cztr.CZTR_ID %}selected{% endif %}>
+                                            {{ cztr.CZTR_ID }} - {{ cztr.CZTR_NM }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                {% if cbcd %}
+                                <input type="hidden" name="cbcd_to" value="{{ cbcd.CBCD_TO }}">
+                                {% endif %}
+                                <div class="form-text">
+                                    出荷先を選択（CZTR_KBN=1の得意先のみ）{% if cbcd %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="cbcd_nm" class="form-label">
+                                    製品名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cbcd_nm" name="cbcd_nm" 
+                                       value="{{ cbcd.CBCD_NM if cbcd else '' }}" maxlength="100" required>
+                                <div class="form-text">
+                                    製品名（最大100文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cbcd_no1" class="form-label">バーコード１</label>
+                                <input type="text" class="form-control" id="cbcd_no1" name="cbcd_no1" 
+                                       value="{{ cbcd.CBCD_NO1 or '' if cbcd else '' }}" maxlength="60">
+                                <div class="form-text">
+                                    バーコード１（最大60文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cbcd_no2" class="form-label">バーコード２</label>
+                                <input type="text" class="form-control" id="cbcd_no2" name="cbcd_no2" 
+                                       value="{{ cbcd.CBCD_NO2 or '' if cbcd else '' }}" maxlength="60">
+                                <div class="form-text">
+                                    バーコード２（最大60文字）
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ "更新" if cbcd else "登録" }}
+                            </button>
+                            <a href="{{ url_for('master_cbcd_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if cbcd %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> 
+                                    {% if cbcd.CBCD_PRD_ID %}
+                                        {% if prd_list %}
+                                            {% set found = false %}
+                                            {% for prd in prd_list %}
+                                                {% if not found and prd.PRD_ID == cbcd.CBCD_PRD_ID %}
+                                                    {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                                    {% set found = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not found %}
+                                                {{ cbcd.CBCD_PRD_ID }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ cbcd.CBCD_PRD_ID }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                                <li><strong>出荷先:</strong> 
+                                    {% if cbcd.CBCD_TO %}
+                                        {% if cztr_list %}
+                                            {% set found = false %}
+                                            {% for cztr in cztr_list %}
+                                                {% if not found and cztr.CZTR_ID == cbcd.CBCD_TO %}
+                                                    {{ cztr.CZTR_ID }} - {{ cztr.CZTR_NM }}
+                                                    {% set found = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not found %}
+                                                {{ cbcd.CBCD_TO }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ cbcd.CBCD_TO }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                                <li><strong>製品名:</strong> {{ cbcd.CBCD_NM }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>バーコード情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>バーコード１:</strong> {{ cbcd.CBCD_NO1 or '-' }}</li>
+                                <li><strong>バーコード２:</strong> {{ cbcd.CBCD_NO2 or '-' }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if not cbcd %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>ノンコート製品</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> PRD01 - ノンコート製品A</li>
+                                <li><strong>出荷先:</strong> 501 - コロンバス</li>
+                                <li><strong>製品名:</strong> ノンコート製品A</li>
+                                <li><strong>バーコード１:</strong> 4901234567890</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>ハードコート製品</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> PRD02 - ハードコート製品B</li>
+                                <li><strong>出荷先:</strong> 502 - ダラス</li>
+                                <li><strong>製品名:</strong> ハードコート製品B</li>
+                                <li><strong>バーコード１:</strong> 4901234567891</li>
+                                <li><strong>バーコード２:</strong> HC001</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createForm');
+    const cbcdPrdIdSelect = document.getElementById('cbcd_prd_id');
+    const cbcdToSelect = document.getElementById('cbcd_to');
+    const cbcdNmInput = document.getElementById('cbcd_nm');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // 製品IDのバリデーション（セレクトボックス）
+        if (!cbcdPrdIdSelect.value.trim()) {
+            showError(cbcdPrdIdSelect, '製品IDは必須です。');
+            isValid = false;
+        } else {
+            clearError(cbcdPrdIdSelect);
+        }
+        
+        // 出荷先のバリデーション（セレクトボックス）
+        if (!cbcdToSelect.value.trim()) {
+            showError(cbcdToSelect, '出荷先は必須です。');
+            isValid = false;
+        } else {
+            clearError(cbcdToSelect);
+        }
+        
+        // 製品名のバリデーション
+        if (!cbcdNmInput.value.trim()) {
+            showError(cbcdNmInput, '製品名は必須です。');
+            isValid = false;
+        } else if (cbcdNmInput.value.length > 100) {
+            showError(cbcdNmInput, '製品名は100文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cbcdNmInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %} 

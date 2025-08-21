@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>コンベックス加工依頼編集</h2>
+    
+    <form id="editForm" class="mt-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="spec">規格</label>
+                    <select class="form-control" id="spec" name="spec" required>
+                        {% for spec in spec_choices %}
+                            <option value="{{ spec[0] }}" {% if spec[0] == gprr.GPRR_SPEC|string %}selected{% endif %}>{{ spec[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="color">色</label>
+                    <select class="form-control" id="color" name="color" required>
+                        {% for color in color_choices %}
+                            <option value="{{ color[0] }}" {% if color[0] == gprr.GPRR_COLOR|string %}selected{% endif %}>{{ color[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="req_date">依頼日</label>
+                    <input type="date" class="form-control" id="req_date" name="req_date" 
+                           value="{{ gprr.GPRR_REQ_DATE.strftime('%Y-%m-%d') if gprr.GPRR_REQ_DATE else '' }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="qty">数量</label>
+                    <input type="number" class="form-control" id="qty" name="qty" 
+                           value="{{ gprr.GPRR_QTY }}" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col">
+                <button type="submit" class="btn btn-primary">更新</button>
+                <a href="{{ url_for('gprr_list') }}" class="btn btn-secondary">一覧に戻る</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // フォームデータを取得
+    const formData = {
+        spec: document.getElementById('spec').value,
+        color: document.getElementById('color').value,
+        req_date: document.getElementById('req_date').value,
+        qty: document.getElementById('qty').value
+    };
+    
+    // PUT APIを呼び出し
+    fetch('/gradation/update_gprr/{{ gprr.GPRR_ID }}', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // 一覧ページにリダイレクト
+            window.location.href = '{{ url_for("gprr_list") }}';
+        } else {
+            alert('エラー: ' + (data.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    });
+});
+</script>
+{% endblock %} 

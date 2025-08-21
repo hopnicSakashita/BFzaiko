@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在庫管理システム - ワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>在庫管理システム - ワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                graph TD
+                    classDef default fill:#0077bb,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef noncoat fill:#ee7733,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef hardcoat fill:#009988,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef decision fill:#ee3377,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef output fill:#999999,stroke:#fff,stroke-width:2px,color:#fff
+
+                    A["受注データ入力"] -->E
+                    B["NCSV取込"] -->|"製造データ登録"| C["NC製造明細"]
+                    C -->|"在庫確認"| D["NC在庫検索"]
+                    D -->|"在庫判断"| E{"出荷・加工選択"}
+                    E -->|"ノンコート出荷"| F["出荷データ"]
+                    E -->|"ハードコート加工"| G["加工手配"]
+                    G --> J["指図書読込"]
+                    J --> H["HC在庫検索"]
+                    J --> I["HC自動出荷"]
+                    I --> F
+                    H --> F
+
+                    class A,B default
+                    class C,D noncoat
+                    class G,H,I,J hardcoat
+                    class E decision
+                    class F output
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #0077bb;"></div>
+                <span>基本フロー（データ入力・取込）</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee7733;"></div>
+                <span>ノンコート関連処理</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #009988;"></div>
+                <span>ハードコート関連処理</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee3377;"></div>
+                <span>処理分岐点</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #999999;"></div>
+                <span>出力データ</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>処理フローの説明</h3>
+            <h4>1. 基本フロー</h4>
+            <ul>
+                <li>受注データ入力：システムへの直接入力</li>
+                <li>NCSV取込：製造データの取り込み</li>
+            </ul>
+
+            <h4>2. ノンコート処理</h4>
+            <ul>
+                <li>NC製造明細：製造データの登録と管理</li>
+                <li>NC在庫検索：現在の在庫状況の確認</li>
+            </ul>
+
+            <h4>3. 処理分岐</h4>
+            <ul>
+                <li>在庫状況に応じて出荷または加工を選択</li>
+                <li>ノンコート出荷：出荷処理　受注データと紐づけて出荷</li>
+                <li>ハードコート加工：追加処理へ</li>
+            </ul>
+
+            <h4>4. ハードコート処理</h4>
+            <ul>
+                <li>加工手配：ハードコート加工用の指図書を作成</li>
+                <li>指図書読込：指図書を読み込んでハードコートの製造データを作成</li>
+                <li>HC在庫検索：HC在庫の確認</li>
+                <li>ハードコート出荷：出荷処理　受注データと紐づけて出荷</li>
+                <li>HC自動出荷：加工済み製品の出荷処理　受注データと紐づけて出荷</li>
+            </ul>
+
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

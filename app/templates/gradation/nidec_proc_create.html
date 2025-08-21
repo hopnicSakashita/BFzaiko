@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ニデック加工データ登録</h2>
+    
+    <!-- 出庫データの表示 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>出庫データ情報</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>出庫ID:</strong> {{ gshk_data.GSHK_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>在庫ID:</strong> {{ gshk_data.GSHK_STC_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>依頼ID:</strong> {{ gshk_data.GSHK_REQ_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>出庫数量:</strong> {{ gshk_data.GSHK_QTY }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>出庫日:</strong> {{ gshk_data.GSHK_DT.strftime('%Y-%m-%d') if gshk_data.GSHK_DT else '' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>手配日:</strong> {{ gshk_data.GSHK_ORD_DT.strftime('%Y-%m-%d') if gshk_data.GSHK_ORD_DT else '' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>差分:</strong> <span id="diff_qty">{{ gshk_data.GSHK_DIFF_QTY if gshk_data.GSHK_DIFF_QTY else 0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加工データ登録フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>加工データ登録</h5>
+        </div>
+        <div class="card-body">
+            <form id="procForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="proc_date">加工日</label>
+                            <input type="date" class="form-control" id="proc_date" name="proc_date" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="proc_qty">加工数量</label>
+                            <input type="number" class="form-control" id="proc_qty" name="proc_qty" min="1" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="ret_ng_qty">戻り不良数</label>
+                            <input type="number" class="form-control" id="ret_ng_qty" name="ret_ng_qty" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="ins_ng_qty">検品不良数</label>
+                            <input type="number" class="form-control" id="ins_ng_qty" name="ins_ng_qty" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="pass_qty">合格数（自動計算）</label>
+                            <input type="number" class="form-control" id="pass_qty" name="pass_qty" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="proc_sts">ステータス</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="proc_sts" name="proc_sts" value="1">
+                                <label class="form-check-label" for="proc_sts">
+                                    完了
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">登録</button>
+                                <a href="{{ url_for('gshk_list') }}" class="btn btn-secondary">戻る</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 既存加工データ一覧 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>加工データ一覧</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="procTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>加工日</th>
+                            <th>加工数量</th>
+                            <th>戻り不良数</th>
+                            <th>検品不良数</th>
+                            <th>合格数</th>
+                            <th>ステータス</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="procTableBody">
+                        <!-- JavaScriptで動的に生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('gshk_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ニデック加工データ編集</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="edit_gprc_id">
+                    <div class="form-group">
+                        <label for="edit_proc_date">加工日</label>
+                        <input type="date" class="form-control" id="edit_proc_date" name="proc_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_proc_qty">加工数量</label>
+                        <input type="number" class="form-control" id="edit_proc_qty" name="proc_qty" min="1" required onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ret_ng_qty">戻り不良数</label>
+                        <input type="number" class="form-control" id="edit_ret_ng_qty" name="ret_ng_qty" min="0" value="0" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ins_ng_qty">検品不良数</label>
+                        <input type="number" class="form-control" id="edit_ins_ng_qty" name="ins_ng_qty" min="0" value="0" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_pass_qty">合格数</label>
+                        <input type="number" class="form-control" id="edit_pass_qty" name="pass_qty" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_sts">ステータス</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_sts" name="sts" value="1">
+                            <label class="form-check-label" for="edit_sts">
+                                完了
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="updateProc()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 合格数の自動計算
+function calculatePassQty() {
+    const procQty = parseInt(document.getElementById('proc_qty').value) || 0;
+    const retNgQty = parseInt(document.getElementById('ret_ng_qty').value) || 0;
+    const insNgQty = parseInt(document.getElementById('ins_ng_qty').value) || 0;
+    
+    const passQty = Math.max(0, procQty - retNgQty - insNgQty);
+    document.getElementById('pass_qty').value = passQty;
+}
+
+// 数量入力時の自動計算
+document.getElementById('proc_qty').addEventListener('input', calculatePassQty);
+document.getElementById('ret_ng_qty').addEventListener('input', calculatePassQty);
+document.getElementById('ins_ng_qty').addEventListener('input', calculatePassQty);
+
+// 既存加工データ一覧を取得
+function loadProcList() {
+    fetch('/gradation/get_nidec_proc_list/{{ gshk_data.GSHK_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayProcList(data.data);
+            } else {
+                document.getElementById('procTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">データの取得に失敗しました: ' + data.error + '</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('procTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">データの取得中にエラーが発生しました</td></tr>';
+        });
+}
+
+// 加工データ一覧を表示
+function displayProcList(procList) {
+    const tbody = document.getElementById('procTableBody');
+    tbody.innerHTML = '';
+    
+    if (procList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">データがありません</td></tr>';
+        return;
+    }
+    
+    procList.forEach(proc => {
+        const statusText = proc.GPRC_STS == 1 ? '完了' : '未完了';
+        const statusClass = proc.GPRC_STS == 1 ? 'badge-success' : 'badge-secondary';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${proc.GPRC_ID}</td>
+            <td>${proc.GPRC_DATE}</td>
+            <td>${proc.GPRC_QTY}</td>
+            <td>${proc.GPRC_RET_NG_QTY}</td>
+            <td>${proc.GPRC_INS_NG_QTY}</td>
+            <td>${proc.GPRC_PASS_QTY || ''}</td>
+            <td>${statusText}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editProc(${proc.GPRC_ID}, '${proc.GPRC_DATE}', ${proc.GPRC_QTY}, ${proc.GPRC_RET_NG_QTY}, ${proc.GPRC_INS_NG_QTY}, ${proc.GPRC_PASS_QTY || 0}, ${proc.GPRC_STS || 0})">編集</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProc(${proc.GPRC_ID})">削除</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// フォーム送信処理
+document.getElementById('procForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        proc_date: document.getElementById('proc_date').value,
+        proc_qty: document.getElementById('proc_qty').value,
+        ret_ng_qty: document.getElementById('ret_ng_qty').value,
+        ins_ng_qty: document.getElementById('ins_ng_qty').value,
+        pass_qty: document.getElementById('pass_qty').value,
+        proc_sts: document.getElementById('proc_sts').checked ? 1 : 0
+    };
+    
+    // 必須項目チェック
+    if (!formData.proc_date || !formData.proc_qty) {
+        alert('加工日と加工数量を入力してください');
+        return;
+    }
+    
+    // 数値の妥当性チェック
+    const procQty = parseInt(formData.proc_qty);
+    const retNgQty = parseInt(formData.ret_ng_qty);
+    const insNgQty = parseInt(formData.ins_ng_qty);
+    
+    if (procQty <= 0) {
+        alert('加工数量は0より大きい値を入力してください');
+        return;
+    }
+    
+    if (retNgQty < 0 || insNgQty < 0) {
+        alert('不良数は0以上の値を入力してください');
+        return;
+    }
+    
+    if (retNgQty + insNgQty > procQty) {
+        alert('戻り不良数と検品不良数の合計が加工数量を超えています');
+        return;
+    }
+    
+    // 出庫数量との比較チェック
+    const shippingQty = {{ gshk_data.GSHK_QTY if gshk_data.GSHK_QTY else 0 }};
+    if (procQty > shippingQty) {
+        alert(`加工数量(${procQty})が出庫数量(${shippingQty})を超えています`);
+        return;
+    }
+    
+    // 既存の加工数量も考慮したチェック
+    checkExistingTotalQty(procQty, shippingQty, formData);
+});
+
+// 既存の加工数量合計をチェック
+function checkExistingTotalQty(newTotalQty, shippingQty, formData) {
+    fetch('/gradation/get_nidec_proc_total_qty/{{ gshk_data.GSHK_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const existingTotal = data.total_qty;
+                const totalQty = existingTotal + newTotalQty;
+                
+                if (totalQty > shippingQty) {
+                    alert(`加工数量の合計(${totalQty})が出庫数量(${shippingQty})を超えています（既存: ${existingTotal}, 新規: ${newTotalQty}）`);
+                    return;
+                }
+                
+                // 一括登録
+                batchCreateProc(formData);
+            } else {
+                alert('エラー: ' + (data.error || '既存データの取得に失敗しました'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('既存データの取得中にエラーが発生しました');
+        });
+}
+
+// 一括登録処理
+function batchCreateProc(formData) {
+    const submitBtn = document.querySelector('#procForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '登録中...';
+    submitBtn.disabled = true;
+    
+    fetch('/gradation/save_nidec_proc/{{ gshk_data.GSHK_ID }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // フォームをリセット
+            document.getElementById('procForm').reset();
+            document.getElementById('pass_qty').value = '';
+            // 一覧を再読み込み
+            loadProcList();
+        } else {
+            alert('エラー: ' + (data.error || '登録に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('登録中にエラーが発生しました');
+    })
+    .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// 加工データ編集モーダルを開く
+function editProc(procId, date, qty, retNgQty, insNgQty, passQty, sts) {
+    document.getElementById('edit_gprc_id').value = procId;
+    document.getElementById('edit_proc_date').value = date;
+    document.getElementById('edit_proc_qty').value = qty;
+    document.getElementById('edit_ret_ng_qty').value = retNgQty;
+    document.getElementById('edit_ins_ng_qty').value = insNgQty;
+    document.getElementById('edit_pass_qty').value = passQty;
+    document.getElementById('edit_sts').checked = (sts == 1);
+    $('#editModal').modal('show');
+}
+
+// 編集モーダルで合格数を自動計算
+function calculateEditPassQty() {
+    const qty = parseInt(document.getElementById('edit_proc_qty').value) || 0;
+    const retNgQty = parseInt(document.getElementById('edit_ret_ng_qty').value) || 0;
+    const insNgQty = parseInt(document.getElementById('edit_ins_ng_qty').value) || 0;
+    
+    const passQty = Math.max(0, qty - retNgQty - insNgQty);
+    document.getElementById('edit_pass_qty').value = passQty;
+}
+
+// 更新処理
+function updateProc() {
+    const procId = document.getElementById('edit_gprc_id').value;
+    const qty = document.getElementById('edit_proc_qty').value;
+    const retNgQty = document.getElementById('edit_ret_ng_qty').value || 0;
+    const insNgQty = document.getElementById('edit_ins_ng_qty').value || 0;
+    
+    // 合格数を自動計算
+    const calculatedPassQty = Math.max(0, parseInt(qty) - parseInt(retNgQty) - parseInt(insNgQty));
+    
+    const formData = {
+        proc_date: document.getElementById('edit_proc_date').value,
+        proc_qty: qty,
+        ret_ng_qty: retNgQty,
+        ins_ng_qty: insNgQty,
+        pass_qty: calculatedPassQty,
+        sts: document.getElementById('edit_sts').checked ? 1 : 0
+    };
+    
+    // バリデーション
+    if (!formData.proc_date || !formData.proc_qty) {
+        alert('加工日と加工数量を入力してください');
+        return;
+    }
+    
+    const procQty = parseInt(formData.proc_qty);
+    if (procQty <= 0) {
+        alert('加工数量は0より大きい値を入力してください');
+        return;
+    }
+    
+    if (parseInt(retNgQty) < 0 || parseInt(insNgQty) < 0) {
+        alert('不良数は0以上の値を入力してください');
+        return;
+    }
+    
+    if (parseInt(retNgQty) + parseInt(insNgQty) > procQty) {
+        alert('戻り不良数と検品不良数の合計が加工数量を超えています');
+        return;
+    }
+    
+    fetch(`/gradation/update_nidec_proc/${procId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            $('#editModal').modal('hide');
+            loadProcList();
+        } else {
+            alert('エラー: ' + (data.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    });
+}
+
+// 加工データ削除
+function deleteProc(procId) {
+    if (confirm('この加工データを削除しますか？')) {
+        fetch(`/gradation/delete_nidec_proc/${procId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('加工データを削除しました');
+                loadProcList();
+            } else {
+                alert('エラー: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    loadProcList();
+    
+    // 編集モーダルが閉じられた時の処理
+    $('#editModal').on('hidden.bs.modal', function () {
+        document.getElementById('editForm').reset();
+    });
+});
+</script>
+{% endblock %} 

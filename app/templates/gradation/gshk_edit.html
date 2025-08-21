@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ニデック加工依頼編集</h2>
+    
+    <!-- 編集フォーム -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>編集フォーム</h5>
+        </div>
+        <div class="card-body">
+            <form id="editForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="stc_id">在庫ID</label>
+                            <input type="number" class="form-control" id="stc_id" name="stc_id" value="{{ gshk_data.GSHK_STC_ID }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="req_id">依頼ID</label>
+                            <input type="number" class="form-control" id="req_id" name="req_id" value="{{ gshk_data.GSHK_REQ_ID }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="dt">出庫日</label>
+                            <input type="date" class="form-control" id="dt" name="dt" value="{{ gshk_data.GSHK_DT.strftime('%Y-%m-%d') if gshk_data.GSHK_DT else '' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="ord_dt">手配日</label>
+                            <input type="date" class="form-control" id="ord_dt" name="ord_dt" value="{{ gshk_data.GSHK_ORD_DT.strftime('%Y-%m-%d') if gshk_data.GSHK_ORD_DT else '' }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="qty">出庫数量</label>
+                            <input type="number" class="form-control" id="qty" name="qty" value="{{ gshk_data.GSHK_QTY }}" min="1" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="flg">フラグ</label>
+                            <select class="form-control" id="flg" name="flg">
+                                <option value="0" {% if gshk_data.GSHK_FLG == 0 %}selected{% endif %}>0</option>
+                                <option value="1" {% if gshk_data.GSHK_FLG == 1 %}selected{% endif %}>1</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">更新</button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">戻る</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// フォーム送信処理
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        stc_id: document.getElementById('stc_id').value,
+        req_id: document.getElementById('req_id').value,
+        dt: document.getElementById('dt').value,
+        ord_dt: document.getElementById('ord_dt').value,
+        qty: document.getElementById('qty').value,
+        flg: document.getElementById('flg').value
+    };
+    
+    // 必須項目チェック
+    if (!formData.stc_id || !formData.req_id || !formData.dt || !formData.ord_dt || !formData.qty) {
+        alert('必須項目を入力してください');
+        return;
+    }
+    
+    // 数値の妥当性チェック
+    if (parseInt(formData.qty) <= 0) {
+        alert('数量は0より大きい値を入力してください');
+        return;
+    }
+    
+    // 更新処理
+    const submitBtn = document.querySelector('#editForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '更新中...';
+    submitBtn.disabled = true;
+    
+    fetch('/gradation/update_gshk/{{ gshk_data.GSHK_ID }}', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.href = '{{ url_for("index") }}';
+        } else {
+            alert('エラー: ' + (data.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    })
+    .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">受注残一覧</h1>
+    
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr class="bg-light">
+                    <th>製品ID</th>
+                    <th>ベース</th>
+                    <th>加入度数</th>
+                    <th>L/R</th>
+                    <th>色</th>
+                    <th>NC在庫</th>
+                    <th>HC在庫</th>
+                    <th>コロンバスNC残</th>
+                    <th>ダラスNC残</th>                    
+                    <th>コロンバスHC残</th>
+                    <th>ダラスHC残</th>
+                    <th>ヤンガーHC残</th>
+                    <th>ヤンガーEU_HC残</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in order_summary%}
+                {% if order.nc_c > 0 or order.nc_d > 0 or order.hc_c > 0 or order.hc_d > 0 or order.hc_y > 0 or order.hc_y_eu > 0 or order.nc_stock > 0 or order.hc_stock > 0 %}
+                    <tr>
+                        <td rowspan="{{ max_rows }}">{{ order.prd_id }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.base }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.adp }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.lr }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.clr }}</td>
+                        <td rowspan="{{ max_rows }}">
+                            <span class="badge {{ 'bg-success' if order.nc_stock > 0 else 'bg-secondary' }}">
+                                {{ order.nc_stock or 0 }}
+                            </span>
+                        </td>
+                        <td rowspan="{{ max_rows }}">
+                            <span class="badge {{ 'bg-success' if order.hc_stock > 0 else 'bg-secondary' }}">
+                                {{ order.hc_stock or 0 }}
+                            </span>
+                        </td>
+                        <td rowspan="{{ max_rows }}">{{ order.nc_c }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.nc_d }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.hc_c }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.hc_d }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.hc_y }}</td>
+                        <td rowspan="{{ max_rows }}">{{ order.hc_y_eu }}</td>
+                    </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.table {
+    font-size: 0.9rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.075);
+}
+
+.container-fluid {
+    padding: 20px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.4em 0.6em;
+}
+</style>
+{% endblock %} 

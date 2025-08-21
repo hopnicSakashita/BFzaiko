@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "区分マスタ編集" if kbn else "区分マスタ新規作成" }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ "bi-pencil-square" if kbn else "bi-plus-circle" }}"></i> 
+                {{ "区分マスタ編集" if kbn else "区分マスタ新規作成" }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 区分マスタ情報{{ "編集" if kbn else "入力" }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('master_kbn_edit', kbn_id=kbn.KBN_ID, kbn_no=kbn.KBN_NO) if kbn else url_for('master_kbn_create') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="kbn_id" class="form-label">
+                                    区分ID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="kbn_id" name="kbn_id" 
+                                       value="{{ kbn.KBN_ID if kbn else '' }}" maxlength="10" required
+                                       {% if kbn %}readonly{% endif %}>
+                                <div class="form-text">
+                                    区分を識別するためのID（例：RANK、GSPEC、GCOLOR）{% if kbn %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="kbn_no" class="form-label">
+                                    区分番号 <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="kbn_no" name="kbn_no" 
+                                       value="{{ kbn.KBN_NO if kbn else '' }}" min="0" max="99" required
+                                       {% if kbn %}readonly{% endif %}>
+                                <div class="form-text">
+                                    区分内での順序を表す番号（0-99）{% if kbn %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="kbn_nm" class="form-label">
+                                    区分名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="kbn_nm" name="kbn_nm" 
+                                       value="{{ kbn.KBN_NM if kbn else '' }}" maxlength="50" required>
+                                <div class="form-text">
+                                    区分の表示名（最大50文字）
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ "更新" if kbn else "登録" }}
+                            </button>
+                            <a href="{{ url_for('master_kbn_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if kbn %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>区分ID:</strong> {{ kbn.KBN_ID }}</li>
+                                <li><strong>区分番号:</strong> {{ kbn.KBN_NO }}</li>
+                                <li><strong>区分名:</strong> {{ kbn.KBN_NM }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>説明</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>区分ID:</strong> 区分を識別するためのID</li>
+                                <li><strong>区分番号:</strong> 区分内での順序を表す番号</li>
+                                <li><strong>区分名:</strong> 区分の表示名</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- 既存の区分ID一覧 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 既存の区分ID一覧
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>RANK - ランク区分</h6>
+                            <p class="text-muted">製品のランクを表す区分</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>GSPEC - グラデーション仕様区分</h6>
+                            <p class="text-muted">グラデーション加工の仕様を表す区分</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>GCOLOR - グラデーション色区分</h6>
+                            <p class="text-muted">グラデーション加工の色を表す区分</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const kbnIdInput = document.getElementById('kbn_id');
+    const kbnNoInput = document.getElementById('kbn_no');
+    const kbnNmInput = document.getElementById('kbn_nm');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // 区分IDのバリデーション
+        if (!kbnIdInput.value.trim()) {
+            showError(kbnIdInput, '区分IDは必須です。');
+            isValid = false;
+        } else if (kbnIdInput.value.length > 10) {
+            showError(kbnIdInput, '区分IDは10文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(kbnIdInput);
+        }
+        
+        // 区分番号のバリデーション
+        if (!kbnNoInput.value.trim()) {
+            showError(kbnNoInput, '区分番号は必須です。');
+            isValid = false;
+        } else if (isNaN(kbnNoInput.value) || kbnNoInput.value < 0 || kbnNoInput.value > 99) {
+            showError(kbnNoInput, '区分番号は0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(kbnNoInput);
+        }
+        
+        // 区分名のバリデーション
+        if (!kbnNmInput.value.trim()) {
+            showError(kbnNmInput, '区分名は必須です。');
+            isValid = false;
+        } else if (kbnNmInput.value.length > 50) {
+            showError(kbnNmInput, '区分名は50文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(kbnNmInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %} 

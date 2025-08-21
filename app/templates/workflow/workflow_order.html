@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>受注管理システム - ワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>受注管理システム - ワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                graph TD
+                    %% スタイル定義
+                    classDef subgraphStyle fill:#FFB6C1,stroke:#333,stroke-width:2px,color:#333
+
+                    subgraph 受注データ管理
+                        A[受注データ入力] -->|手動入力| B[(SQL Server<br/>受注テーブル)]
+                        C[CSVデータ] -->|メール受信| D[CSV取込処理]
+                        D -->|データ変換| B
+                        B -->|受注残チェック| E[在庫照会]
+                        E -->|在庫不足| F[生産必要数算出]
+                    end
+
+                    subgraph manufacture[製造指図書作成]
+                        F -->G[製造指図書作成]
+                    end
+
+                    subgraph inventory[在庫管理（自社実装済み）]
+                        G -->|製造指示| P[製造データ]
+                        P -->|CSV取込処理| Q[(SQL Server<br/>製造・在庫テーブル)]
+                        Q --> H[出荷指示]
+                    end
+
+                    subgraph shipping[出荷・帳票管理]
+                        H -->|出荷データ作成| I[(SQL Server<br/>出荷テーブル)]
+                        I -->|出荷実績| J[納品書作成]
+                        I -->|月次締め| K[請求書作成]
+                        J -->|PDF出力| L[納品書PDF]
+                        K -->|PDF出力| M[請求書PDF]
+                        N[月次帳票] -->|集計| O[月次レポート]
+                    end
+
+                    %% サブグラフへのスタイル適用
+                    class inventory subgraphStyle
+                    class manufacture subgraphStyle
+
+                    %% ノードのスタイル定義
+                    style A fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style B fill:#87CEEB,stroke:#333,stroke-width:2px,color:#333
+                    style C fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#333
+                    style D fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style E fill:#FFB6C1,stroke:#333,stroke-width:2px,color:#333
+                    style F fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style G fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#333
+                    style H fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style I fill:#87CEEB,stroke:#333,stroke-width:2px,color:#333
+                    style J fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style K fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style L fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#333
+                    style M fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#333
+                    style N fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style O fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#333
+                    style P fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    style Q fill:#87CEEB,stroke:#333,stroke-width:2px,color:#333
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #98FB98;"></div>
+                <span>システム処理</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #87CEEB;"></div>
+                <span>データベース</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #DDA0DD;"></div>
+                <span>ドキュメント・ファイル</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #FFB6C1;"></div>
+                <span>判断処理</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>処理フローの説明</h3>
+            <h4>1. 受注データ管理</h4>
+            <ul>
+                <li>手動入力：画面からの直接入力による受注データ作成</li>
+                <li>CSVデータ取込：顧客からメールで受信したCSVデータのインポート</li>
+                <li>在庫照会：受注データに基づく在庫状況の確認</li>
+                <li>生産指示：在庫不足時の生産必要数算出と製造指示書の作成</li>
+            </ul>
+
+            <h4>2. 在庫管理連携</h4>
+            <ul>
+                <li>在庫データ連携：製造データのSQL Serverへの取込による在庫情報の更新</li>
+                <li>出荷指示：在庫状況に基づく出荷指示の作成</li>
+            </ul>
+
+            <h4>3. 出荷管理・帳票作成</h4>
+            <ul>
+                <li>出荷データ作成：出荷指示に基づく出荷情報の登録</li>
+                <li>納品書作成：出荷実績に基づく納品書のPDF生成</li>
+                <li>請求書作成：月次締めに基づく請求書のPDF生成</li>
+                <li>月次処理：月次データの集計とレポート作成</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>加工状況マトリックス</h2>
+    
+    <!-- 説明 -->
+    <div class="alert alert-info mb-4">
+        <h6><i class="bi bi-info-circle"></i> マトリックス表の見方</h6>
+        <p class="mb-0">
+            <strong>縦軸：規格</strong>、<strong>横軸：色</strong>のマトリックスで加工状況を表示します。<br>
+            各セルには「未戻り数 / 検査前 / 検査後」の形式で表示されます。
+        </p>
+    </div>
+
+    <!-- コンベックス加工状況 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>コンベックス加工状況（1回目加工）</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width: 120px;">規格 / 色</th>
+                            {% for color in color_choices %}
+                                <th class="text-center" style="min-width: 100px;">{{ color[1] }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spec in spec_choices %}
+                        <tr>
+                            <td class="table-secondary fw-bold">{{ spec[1] }}</td>
+                            {% for color in color_choices %}
+                                {% set key = (spec[0]|int, color[0]|int) %}
+                                {% set data = convex_data.get(key, {'not_returned': 0, 'total_proc_before_inspect': 0, 'total_proc_after_inspect': 0}) %}
+                                <td class="text-center">
+                                    {% if data.not_returned > 0 or data.total_proc_before_inspect > 0 or data.total_proc_after_inspect > 0 %}
+                                        <div class="d-flex flex-column">
+                                            <span class="badge bg-warning text-dark mb-1" title="未戻り数">
+                                                {{ data.not_returned }}
+                                            </span>
+                                            <span class="badge bg-info mb-1" title="検査前">
+                                                {{ data.total_proc_before_inspect }}
+                                            </span>
+                                            <span class="badge bg-success" title="検査後">
+                                                {{ data.total_proc_after_inspect }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ニデック加工状況 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>ニデック加工状況（2回目加工）</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width: 120px;">規格 / 色</th>
+                            {% for color in color_choices %}
+                                <th class="text-center" style="min-width: 100px;">{{ color[1] }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spec in spec_choices %}
+                        <tr>
+                            <td class="table-secondary fw-bold">{{ spec[1] }}</td>
+                            {% for color in color_choices %}
+                                {% set key = (spec[0]|int, color[0]|int) %}
+                                {% set data = nidec_data.get(key, {'not_returned': 0, 'total_proc_before_inspect': 0, 'total_proc_after_inspect': 0}) %}
+                                <td class="text-center">
+                                    {% if data.not_returned > 0 or data.total_proc_before_inspect > 0 or data.total_proc_after_inspect > 0 %}
+                                        <div class="d-flex flex-column">
+                                            <span class="badge bg-warning text-dark mb-1" title="未戻り数">
+                                                {{ data.not_returned }}
+                                            </span>
+                                            <span class="badge bg-info mb-1" title="検査前">
+                                                {{ data.total_proc_before_inspect }}
+                                            </span>
+                                            <span class="badge bg-success" title="検査後">
+                                                {{ data.total_proc_after_inspect }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 凡例 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>凡例</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>数値の意味</h6>
+                    <ul class="list-unstyled">
+                        <li><span class="badge bg-warning text-dark me-2">数値</span> 未戻り数（加工に出してまだ戻ってきていない数）</li>
+                        <li><span class="badge bg-info me-2">数値</span> 検査前（戻ってきて検査前の数）</li>
+                        <li><span class="badge bg-success me-2">数値</span> 検査後（検査完了後の数）</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>表示形式</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>「未戻り数 / 検査前 / 検査後」</strong> の形式で表示</li>
+                        <li><strong>「-」</strong> データなし</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 集計情報 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6>コンベックス加工集計</h6>
+                </div>
+                <div class="card-body">
+                    {% set convex_total_not_returned = convex_data.values() | sum(attribute='not_returned') %}
+                    {% set convex_total_before_inspect = convex_data.values() | sum(attribute='total_proc_before_inspect') %}
+                    {% set convex_total_after_inspect = convex_data.values() | sum(attribute='total_proc_after_inspect') %}
+                    <p class="mb-1">未戻り数合計: <span class="badge bg-warning text-dark">{{ convex_total_not_returned }}</span></p>
+                    <p class="mb-1">検査前合計: <span class="badge bg-info">{{ convex_total_before_inspect }}</span></p>
+                    <p class="mb-0">検査後合計: <span class="badge bg-success">{{ convex_total_after_inspect }}</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6>ニデック加工集計</h6>
+                </div>
+                <div class="card-body">
+                    {% set nidec_total_not_returned = nidec_data.values() | sum(attribute='not_returned') %}
+                    {% set nidec_total_before_inspect = nidec_data.values() | sum(attribute='total_proc_before_inspect') %}
+                    {% set nidec_total_after_inspect = nidec_data.values() | sum(attribute='total_proc_after_inspect') %}
+                    <p class="mb-1">未戻り数合計: <span class="badge bg-warning text-dark">{{ nidec_total_not_returned }}</span></p>
+                    <p class="mb-1">検査前合計: <span class="badge bg-info">{{ nidec_total_before_inspect }}</span></p>
+                    <p class="mb-0">検査後合計: <span class="badge bg-success">{{ nidec_total_after_inspect }}</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+        <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .alert {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+    .table {
+        font-size: 12px;
+    }
+    .badge {
+        border: 1px solid #000 !important;
+    }
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>NC出荷作成</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">在庫情報</h5>
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-bordered">
+                        <thead>
+                        <tr>
+                            <th>ベース</th>
+                            <th>加入度数</th>
+                            <th>LR</th>
+                            <th>カラー</th>
+                            <th>LOT</th>
+                            <th>在庫数</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ stock.BFSP_BASE }}</td>
+                                <td>{{ stock.BFSP_ADP }}</td>
+                                <td>{{ stock.BFSP_LR }}</td>
+                                <td>{{ stock.BFSP_CLR }}</td>
+                                <td>{{ stock.BPDD_LOT }}</td>
+                                <td>{{ stock.stock_qty }}</td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">受注残情報</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>ノンコート受注残</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>受注日</th>
+                                    <th>注文番号</th>
+                                    <th>出荷先</th>
+                                    <th>数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in nc_orders %}
+                                <tr>
+                                    <td>{{ order.BRCP_DT.strftime('%Y/%m/%d') }}</td>
+                                    <td>{{ order.BRCP_ORDER_NO }}</td>
+                                    <td>{{ order.CZTR_NM }}</td>
+                                    <td>{{ order.remaining_qty }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>ハードコート受注残</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>受注日</th>
+                                    <th>注文番号</th>
+                                    <th>出荷先</th>
+                                    <th>数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in hc_orders %}
+                                <tr>
+                                    <td>{{ order.BRCP_DT.strftime('%Y/%m/%d') }}</td>
+                                    <td>{{ order.BRCP_ORDER_NO }}</td>
+                                    <td>{{ order.CZTR_NM }}</td>
+                                    <td>{{ order.remaining_qty }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">加工指図</h5>
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>加工指図日付</th>
+                                <th>加工指図数量</th>
+                                <th>LOT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in proc_order %}
+                            <tr>
+                                <td>{{ order.BSHK_DT.strftime('%Y/%m/%d') }}</td>
+                                <td>{{ order.BSHK_QTY }}</td>
+                                <td>{{ order.BPDD_LOT }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">出荷情報入力</h5>
+            <form id="shippingForm" method="POST">
+                <div id="shippingEntries">
+                    <div class="shipping-entry mb-3">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>出荷先</label>
+                                    <select name="ship_to[]" class="form-control" required>
+                                        <option value="">選択してください</option>
+                                        {% for dest in shipping_destinations %}
+                                        <option value="{{ dest.CZTR_ID }}">{{ dest.CZTR_NM }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>出荷日</label>
+                                    <input type="date" name="ship_date[]" class="form-control" required value="{{ today }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>手配日</label>
+                                    <input type="date" name="order_date[]" class="form-control" required value="{{ today }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>数量</label>
+                                    <input type="number" name="quantity[]" class="form-control" required min="1">
+                                </div>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger delete-entry">削除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="addEntry" class="btn btn-secondary mb-3">出荷先を追加</button>
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('noncoat_stock_search') }}" class="btn btn-secondary">戻る</a>
+                    <button type="submit" class="btn btn-primary">出荷を作成</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('addEntry').addEventListener('click', function() {
+    const template = document.querySelector('.shipping-entry').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = '');
+    template.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    document.getElementById('shippingEntries').appendChild(template);
+});
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('delete-entry')) {
+        const entries = document.querySelectorAll('.shipping-entry');
+        if (entries.length > 1) {
+            e.target.closest('.shipping-entry').remove();
+        } else {
+            AppAlerts.showWarning('削除不可', '少なくとも1つの出荷先が必要です。');
+        }
+    }
+});
+
+document.getElementById('shippingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitButton = document.querySelector('button[type="submit"]');
+    
+    // 2重送信防止
+    if (submitButton.disabled) return;
+    
+    // ボタンを無効化
+    ButtonControl.disable(submitButton, '保存中...');
+    
+    // フォームデータを収集
+    const formData = new FormData(this);
+    
+    // JSONデータを構築
+    const data = {
+        shipments: []
+    };
+    
+    const shipTos = formData.getAll('ship_to[]');
+    const shipDates = formData.getAll('ship_date[]');
+    const orderDates = formData.getAll('order_date[]');
+    const quantities = formData.getAll('quantity[]');
+    
+    for (let i = 0; i < shipTos.length; i++) {
+        if (shipTos[i] && quantities[i]) {
+            data.shipments.push({
+                ship_to: shipTos[i],
+                ship_date: shipDates[i],
+                order_date: orderDates[i],
+                quantity: quantities[i]
+            });
+        }
+    }
+    
+    // サーバーにデータを送信
+    fetch('{{ url_for("save_shipping", stock_id=stock.BPDD_ID) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            AppAlerts.showSuccess('保存完了', '出荷データが保存されました');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("noncoat_stock_search") }}';
+            }, 1500);
+        } else {
+            AppAlerts.showError('保存エラー', 'エラーが発生しました: ' + data.error);
+            // エラー時はボタンを有効化
+            ButtonControl.enable(submitButton);
+        }
+    })
+    .catch(error => {
+        AppAlerts.showError('通信エラー', 'エラーが発生しました: ' + error.toString());
+        // エラー時はボタンを有効化
+        ButtonControl.enable(submitButton);
+    });
+});
+</script>
+{% endblock %} 

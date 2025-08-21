@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<meta name="barcode-url" content="{{ url_for('shipment_barcode') }}">
+<div class="container-fluid">
+    <!-- バーコード保存用のURL -->
+    <script>
+        var barcodeUrl = "{{ url_for('shipment_barcode') }}";
+    </script>
+
+    <h1 class="mb-4">出荷一覧</h1>
+
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" class="g-3" id="searchForm">
+                {{ form.csrf_token }}
+                <div class="row">
+                    <div class="col-md-3">
+                        {{ form.base.label(class="form-label") }}
+                        {{ form.base(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.adp.label(class="form-label") }}
+                        {{ form.adp(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.lr.label(class="form-label") }}
+                        {{ form.lr(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.color.label(class="form-label") }}
+                        {{ form.color(class="form-select") }}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        {{ form.proc_type.label(class="form-label") }}
+                        {{ form.proc_type(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.shipment_date.label(class="form-label") }}
+                        {{ form.shipment_date(class="form-control") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.destination.label(class="form-label") }}
+                        {{ form.destination(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.order_no.label(class="form-label") }}
+                        {{ form.order_no(class="form-control") }}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        {{ form.shipment_status.label(class="form-label") }}
+                        {{ form.shipment_status(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.order_date.label(class="form-label") }}
+                        {{ form.order_date(class="form-control") }}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">検索</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-secondary w-100" onclick="resetForm()">リセット</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success w-100" onclick="printPDF()">PDF</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-info w-100" onclick="saveBarcode()">バーコード</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 出荷一覧テーブル -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr class="bg-light">
+                    <th>手配日</th>
+                    <th>出荷日</th>
+                    <th>出荷先</th>
+                    <th>客先注文番号</th>
+                    <th>LOT</th>
+                    <th>ベース</th>
+                    <th>加入度数</th>
+                    <th>L/R</th>
+                    <th>色</th>
+                    <th>出荷数</th>
+                    <th>コート日</th>
+                    <th>コーティング</th>
+                    <th>出荷状況</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shipment in shipments %}
+                <tr>
+                    <td>{{ shipment.order_date }}</td>
+                    <td>{{ shipment.shipment_date }}</td>
+                    <td>{{ shipment.destination }}</td>
+                    <td>{{ shipment.order_number }}</td>
+                    <td>{{ shipment.lot }}</td>
+                    <td>{{ shipment.base }}</td>
+                    <td>{{ shipment.adp }}</td>
+                    <td>{{ shipment.lr }}</td>
+                    <td>{{ shipment.color }}</td>
+                    <td>{{ shipment.quantity }}</td>
+                    <td>{{ shipment.coating_date }}</td>
+                    <td>{{ shipment.proc_type }}</td>
+                    <td>{{ shipment.shipment_status }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('{{ shipment.id }}')">
+                            <i class="fas fa-trash"></i> 削除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.table {
+    font-size: 0.9rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.075);
+}
+
+.container-fluid {
+    padding: 20px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.5em 0.8em;
+}
+</style>
+
+<script>
+function resetForm() {
+    window.location.href = "{{ url_for('shipment_list') }}";
+}
+
+function printPDF() {
+    // フォームの値を取得
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    
+    // URLSearchParamsに変換
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {  // 空の値は除外
+            params.append(key, value);
+        }
+    }
+    
+    // PDF出力用のURLを構築
+    const url = "{{ url_for('shipment_pdf') }}?" + params.toString();
+    console.log("PDF URL:", url);  // デバッグ用
+    
+    // 新しいウィンドウでPDFを開く
+    window.open(url, '_blank');
+}
+
+function saveBarcode() {
+    // フォームの値を取得
+    const form = document.querySelector('#searchForm');
+    const formData = new FormData(form);
+    
+    // URLSearchParamsに変換
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {  // 空の値は除外
+            params.append(key, value);
+        }
+    }
+    
+    // デバッグ情報を出力
+    console.log("バーコード処理: フォームデータ", Object.fromEntries(formData));
+    console.log("バーコード処理: URLパラメータ", params.toString());
+    
+    // バーコード保存用のURLを構築してリダイレクト
+    const url = "{{ url_for('shipment_barcode') }}?" + params.toString();
+    console.log("バーコード処理: リダイレクトURL", url);
+    window.location.href = url;
+}
+
+// 削除確認
+function confirmDelete(shipmentId) {
+    console.log('Deleting shipment:', shipmentId); // デバッグ出力
+
+    if (!shipmentId) {
+        console.error('Invalid shipment ID:', shipmentId);
+        AppAlerts.showError('無効なデータ', '無効な出荷IDです。');
+        return;
+    }
+
+    if (confirm('この出荷データを削除してもよろしいですか？')) {
+        fetch(`/shipment/${shipmentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            }
+        })
+        .then(response => {
+            console.log('Delete response:', response); // デバッグ出力
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Delete result:', data); // デバッグ出力
+            if (data.success) {
+                AppAlerts.showSuccess('削除完了', '出荷データを削除しました。');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                AppAlerts.showError('削除失敗', '削除に失敗しました: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            AppAlerts.showError('削除エラー', '削除処理中にエラーが発生しました。', error.toString());
+        });
+    }
+}
+</script>
+{% endblock %} 

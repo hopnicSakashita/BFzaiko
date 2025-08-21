@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ハードコート自動出荷</h2>
+    
+    <!-- 説明 -->
+    <div class="alert alert-info mb-4">
+        <h6><i class="bi bi-info-circle"></i> ハードコート自動出荷の仕組み</h6>
+        <p class="mb-0">
+            指定された規格・色の<strong>BPDD_PROC=1（在庫）</strong>のデータを<br>
+            <strong>BPDD_LOTの小さい順</strong>に出荷します。
+        </p>
+    </div>
+
+    <!-- 出荷条件入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>出荷条件入力</h5>
+        </div>
+        <div class="card-body">
+            <form id="autoShippingForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="base">ベース <span class="text-danger">*</span></label>
+                            <select class="form-control" id="base" name="base" required>
+                                <option value="">選択してください</option>
+                                {% for choice in form.base.choices %}
+                                    <option value="{{ choice[0] }}">{{ choice[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="adp">加入度数 <span class="text-danger">*</span></label>
+                            <select class="form-control" id="adp" name="adp" required>
+                                <option value="">選択してください</option>
+                                {% for choice in form.adp.choices %}
+                                    <option value="{{ choice[0] }}">{{ choice[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="lr">LR <span class="text-danger">*</span></label>
+                            <select class="form-control" id="lr" name="lr" required>
+                                <option value="">選択してください</option>
+                                {% for choice in form.lr.choices %}
+                                    <option value="{{ choice[0] }}">{{ choice[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="clr">カラー <span class="text-danger">*</span></label>
+                            <select class="form-control" id="clr" name="clr" required>
+                                <option value="">選択してください</option>
+                                {% for choice in form.clr.choices %}
+                                    <option value="{{ choice[0] }}">{{ choice[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="ship_to">出荷先 <span class="text-danger">*</span></label>
+                            <select class="form-control" id="ship_to" name="ship_to" required>
+                                <option value="">選択してください</option>
+                                {% for dest in shipping_destinations %}
+                                {% if dest.CZTR_ID != DatabaseConstants.SHIPMENT_TO_PROCESS %}
+                                <option value="{{ dest.CZTR_ID }}">{{ dest.CZTR_NM }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="order_date">手配日 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="order_date" name="order_date" required value="{{ today }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="ship_date">出荷日 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="ship_date" name="ship_date" required value="{{ today }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="quantity">出荷数 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" min="1" required>
+                            <div id="qtyCheckResult" class="mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <div id="availableQtyInfo" class="alert alert-info" style="display: none;">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>利用可能在庫数: <span id="availableQty">0</span></strong>
+                            <br><small>対象レコード数: <span id="recordCount">0</span>件</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary" id="executeBtn">
+                            <i class="bi bi-box-arrow-up"></i> 自動出荷実行
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                        <a href="{{ url_for('hardcoat_stock_search') }}" class="btn btn-secondary">戻る</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 実行結果表示エリア -->
+    <div id="resultArea" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>実行結果</h5>
+            </div>
+            <div class="card-body">
+                <div id="resultMessage"></div>
+                <div id="resultDetails" style="display: none;">
+                    <h6 class="mt-3">出荷詳細</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>製造ID</th>
+                                    <th>LOT</th>
+                                    <th>コート日</th>
+                                    <th>出荷前在庫</th>
+                                    <th>出荷数量</th>
+                                    <th>出荷後残在庫</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    // 今日の日付をデフォルトに設定
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('order_date').value = today;
+    document.getElementById('ship_date').value = today;
+    
+    // 規格選択時のイベントリスナーを設定
+    document.getElementById('base').addEventListener('change', checkAvailableQty);
+    document.getElementById('adp').addEventListener('change', checkAvailableQty);
+    document.getElementById('lr').addEventListener('change', checkAvailableQty);
+    document.getElementById('clr').addEventListener('change', checkAvailableQty);
+
+    // 数量入力時のイベントリスナーを設定
+    document.getElementById('quantity').addEventListener('input', checkQtyInput);
+});
+
+// 出荷可能数量をチェック
+function checkAvailableQty() {
+    const base = document.getElementById('base').value;
+    const adp = document.getElementById('adp').value;
+    const lr = document.getElementById('lr').value;
+    const clr = document.getElementById('clr').value;
+    const availableQtyInfo = document.getElementById('availableQtyInfo');
+    
+    if (!base || !adp || !lr || !clr) {
+        availableQtyInfo.style.display = 'none';
+        return;
+    }
+    
+    // 出荷可能数量を取得
+    fetch('{{ url_for("hardcoat_check_stock") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'base': base,
+            'adp': adp,
+            'lr': lr,
+            'clr': clr
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('availableQty').textContent = data.total_stock;
+            document.getElementById('recordCount').textContent = data.record_count;
+            availableQtyInfo.style.display = 'block';
+            
+            // 数量入力フィールドの最大値を設定
+            document.getElementById('quantity').max = data.total_stock;
+            
+            // 現在の数量入力値をチェック
+            checkQtyInput();
+        } else {
+            availableQtyInfo.style.display = 'none';
+            console.error('在庫チェックエラー:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        availableQtyInfo.style.display = 'none';
+    });
+}
+
+// 数量入力チェック
+function checkQtyInput() {
+    const qty = parseInt(document.getElementById('quantity').value) || 0;
+    const availableQty = parseInt(document.getElementById('availableQty').textContent) || 0;
+    const qtyCheckResult = document.getElementById('qtyCheckResult');
+    
+    if (qty > 0 && availableQty > 0) {
+        if (qty > availableQty) {
+            qtyCheckResult.innerHTML = `
+                <div class="alert alert-warning py-1 mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    利用可能在庫数（${availableQty}）を超えています
+                </div>
+            `;
+        } else if (qty === availableQty) {
+            qtyCheckResult.innerHTML = `
+                <div class="alert alert-info py-1 mb-0">
+                    <i class="bi bi-info-circle"></i> 
+                    利用可能在庫数と一致しています
+                </div>
+            `;
+        } else {
+            qtyCheckResult.innerHTML = `
+                <div class="alert alert-success py-1 mb-0">
+                    <i class="bi bi-check-circle"></i> 
+                    利用可能在庫数内です（残り: ${availableQty - qty}）
+                </div>
+            `;
+        }
+    } else {
+        qtyCheckResult.innerHTML = '';
+    }
+}
+
+// フォーム送信処理
+document.getElementById('autoShippingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 出荷可能数量の最終チェック
+    const qty = parseInt(document.getElementById('quantity').value) || 0;
+    const availableQty = parseInt(document.getElementById('availableQty').textContent) || 0;
+    
+    if (qty > availableQty) {
+        const confirmMessage = `利用可能在庫数（${availableQty}）を超えています（${qty}）。\n\nこのまま実行しますか？`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+    }
+    
+    // 実行ボタンを無効化
+    const executeBtn = document.getElementById('executeBtn');
+    executeBtn.disabled = true;
+    executeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 処理中...';
+    
+    // フォームデータを取得
+    const formData = new FormData(this);
+    
+    // 自動出荷を実行
+    fetch('{{ url_for("hardcoat_auto_shipping_save") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // 実行ボタンを復活
+        executeBtn.disabled = false;
+        executeBtn.innerHTML = '<i class="bi bi-box-arrow-up"></i> 自動出荷実行';
+        
+        // 結果を表示
+        displayResult(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // 実行ボタンを復活
+        executeBtn.disabled = false;
+        executeBtn.innerHTML = '<i class="bi bi-box-arrow-up"></i> 自動出荷実行';
+        
+        // エラーを表示
+        displayResult({
+            success: false,
+            error: '通信エラーが発生しました'
+        });
+    });
+});
+
+// 結果表示
+function displayResult(data) {
+    const resultArea = document.getElementById('resultArea');
+    const resultMessage = document.getElementById('resultMessage');
+    const resultDetails = document.getElementById('resultDetails');
+    
+    resultArea.style.display = 'block';
+    
+    if (data.success) {
+        resultMessage.innerHTML = `
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> ${data.message}
+                <br><strong>出荷数量: ${data.total_shipped}</strong>
+                ${data.remaining_qty > 0 ? `<br><span class="text-warning">未出荷数量: ${data.remaining_qty}</span>` : ''}
+            </div>
+        `;
+        
+        // 詳細を表示
+        if (data.shipped_records && data.shipped_records.length > 0) {
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
+            
+            data.shipped_records.forEach(record => {
+                const remainingStock = record.stock_qty - record.shipped_qty;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.bpdd_id}</td>
+                    <td>${record.bpdd_lot}</td>
+                    <td>${record.bpdd_crt}</td>
+                    <td>${record.stock_qty}</td>
+                    <td>${record.shipped_qty}</td>
+                    <td>${remainingStock}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            resultDetails.style.display = 'block';
+        } else {
+            resultDetails.style.display = 'none';
+        }
+    } else {
+        resultMessage.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> ${data.error}
+            </div>
+        `;
+        resultDetails.style.display = 'none';
+    }
+}
+
+// フォームクリア
+function clearForm() {
+    document.getElementById('autoShippingForm').reset();
+    document.getElementById('resultArea').style.display = 'none';
+    
+    // 今日の日付をデフォルトに設定
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('order_date').value = today;
+    document.getElementById('ship_date').value = today;
+}
+</script>
+{% endblock %} 

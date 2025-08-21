@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}製品マスタ一覧 - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-box"></i> 製品マスタ一覧
+            </h2>
+            
+            <!-- 検索フォーム -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i> 検索条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('master_prd_list') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="prd_kbn" class="form-label">商品分類</label>
+                            <select class="form-select" id="prd_kbn" name="prd_kbn">
+                                {% for value, label in prd_kbn_choices %}
+                                <option value="{{ value }}" {% if value == search_prd_kbn %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">表示条件</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="prd_flg" name="prd_flg" value="0" 
+                                       {% if prd_flg == '0' %}checked{% endif %}>
+                                <label class="form-check-label" for="prd_flg">
+                                    有効なもののみ表示
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-search"></i> 検索
+                            </button>
+                            <a href="{{ url_for('master_prd_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-clockwise"></i> リセット
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 操作ボタン -->
+            <div class="mb-3">
+                <a href="{{ url_for('master_prd_create') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> 新規作成
+                </a>
+            </div>
+            
+            <!-- データテーブル -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table"></i> 製品マスタデータ
+                        <span class="badge bg-primary ms-2">{{ prd_list|length }}件</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if prd_list %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>操作</th>
+                                    <th>表示名</th>
+                                    <th>商品分類</th>
+                                    <th>製品ID</th>
+                                    <th>モノマー</th>
+                                    <th>呼び名</th>
+                                    <th>下型</th>
+                                    <th>上型</th>
+                                    <th>膜カラー</th>
+                                    <th>フラグ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prd in prd_list %}
+                                <tr>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('master_prd_edit', prd_id=prd.PRD_ID) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-pencil"></i> 編集
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="confirmDelete('{{ prd.PRD_ID }}', '{{ prd.PRD_NAME }}')">
+                                                <i class="bi bi-trash"></i> 削除
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>{{ prd.PRD_DSP_NM or '-' }}</td>
+                                    <td>
+                                        {% if prd.PRD_KBN == DatabaseConstants.PRD_KBN_PRD %}
+                                            <span class="badge bg-primary">製造レンズ</span>
+                                        {% elif prd.PRD_KBN == DatabaseConstants.PRD_KBN_BF %}
+                                            <span class="badge bg-info">BF</span>
+                                        {% elif prd.PRD_KBN == DatabaseConstants.PRD_KBN_BASE %}
+                                            <span class="badge bg-warning">基材</span>
+                                        {% elif prd.PRD_KBN == DatabaseConstants.PRD_KBN_PROC %}
+                                            <span class="badge bg-success">加工レンズ</span>
+                                        {% elif prd.PRD_KBN == DatabaseConstants.PRD_KBN_OTHER %}
+                                            <span class="badge bg-secondary">その他</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ prd.PRD_KBN }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ prd.PRD_ID }}</td>
+                                    <td>{{ prd.PRD_MONOMER or '-' }}</td>
+                                    <td>{{ prd.PRD_NAME }}</td>
+                                    <td>{{ prd.PRD_LOWER_DIE or '-' }}</td>
+                                    <td>{{ prd.PRD_UPPER_DIE or '-' }}</td>
+                                    <td>{{ prd.PRD_FILM_COLOR or '-' }}</td>
+                                    <td>
+                                        {% if prd.PRD_FLG == 0 %}
+                                            <span class="badge bg-success">有効</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">無効</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 該当するデータが見つかりません。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">削除確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>以下の製品マスタを削除しますか？</p>
+                <div class="alert alert-warning">
+                    <strong>製品ID:</strong> <span id="deletePrdId"></span><br>
+                    <strong>呼び名:</strong> <span id="deletePrdName"></span>
+                </div>
+                <p class="text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    この操作は取り消せません。
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> 削除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(prdId, prdName) {
+    document.getElementById('deletePrdId').textContent = prdId;
+    document.getElementById('deletePrdName').textContent = prdName;
+    
+    const deleteForm = document.getElementById('deleteForm');
+    deleteForm.action = `/master/prd/${prdId}/delete`;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %} 

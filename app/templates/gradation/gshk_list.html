@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ニデック依頼一覧</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('gshk_list') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="date_from">出庫日（開始）</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ search_date_from }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="date_to">出庫日（終了）</label>
+                            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ search_date_to }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="flg">処理状況</label>
+                            <select class="form-control" id="flg" name="flg">
+                                <option value="">すべて</option>
+                                <option value="0" {% if search_flg == '0' %}selected{% endif %}>未処理</option>
+                                <option value="1" {% if search_flg == '1' %}selected{% endif %}>処理済</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary" name="searched" value="1">検索</button>
+                                <a href="{{ url_for('gshk_list') }}" class="btn btn-secondary">クリア</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 検索結果件数表示 -->
+    {% if searched == '1' %}
+    <div class="alert alert-info">
+        検索結果: {{ total_count }}件
+    </div>
+    {% endif %}
+
+    <!-- データ一覧 -->
+    {% if searched == '1' %}
+    <div class="table-responsive mt-4">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>出庫ID</th>
+                    <th>規格</th>
+                    <th>色</th>
+                    <th>出庫日</th>
+                    <th>手配日</th>
+                    <th>数量</th>
+                    <th>残数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if gshk_list %}
+                    {% for gshk in gshk_list %}
+                    <tr>
+                        <td>{{ gshk.GSHK_ID }}</td>
+                        <td>{{ gshk.GPRR_SPEC_NM }}</td>
+                        <td>{{ gshk.GPRR_COLOR_NM }}</td>
+                        <td>{{ gshk.GSHK_DT.strftime('%Y-%m-%d') if gshk.GSHK_DT else '' }}</td>
+                        <td>{{ gshk.GSHK_ORD_DT.strftime('%Y-%m-%d') if gshk.GSHK_ORD_DT else '' }}</td>
+                        <td>{{ gshk.GSHK_QTY }}</td>
+                        <td>{{ gshk.GSHK_DIFF_QTY }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_gshk', gshk_id=gshk.GSHK_ID) }}" class="btn btn-warning btn-sm">編集</a>
+                            <button class="btn btn-danger btn-sm" onclick="deleteGshk({{ gshk.GSHK_ID }})">削除</button>
+                            <a href="{{ url_for('nidec_proc_create', gshk_id=gshk.GSHK_ID) }}" class="btn btn-success btn-sm">入庫</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">検索条件に一致するデータがありません</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning mt-4">
+        検索条件を入力して「検索」ボタンを押してください。
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+    </div>
+</div>
+
+<script>
+function deleteGshk(gshkId) {
+    if (confirm('このデータを削除しますか？')) {
+        fetch(`/gradation/delete_gshk/${gshkId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('データを削除しました。');
+                location.reload();
+            } else {
+                alert('エラー: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+
+
+</script>
+{% endblock %} 

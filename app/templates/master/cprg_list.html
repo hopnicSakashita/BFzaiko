@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}加工集計グループマスタ一覧 - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-diagram-3"></i> 加工集計グループマスタ一覧
+            </h2>
+            
+            <!-- 検索フォーム -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i> 検索条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('total.cprg_list') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="cprg_id" class="form-label">グループID</label>
+                            <select class="form-select" id="cprg_id" name="cprg_id">
+                                {% for value, label in cprg_id_choices %}
+                                <option value="{{ value }}" {% if value == search_cprg_id %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-search"></i> 検索
+                            </button>
+                            <a href="{{ url_for('total.cprg_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-clockwise"></i> リセット
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 操作ボタン -->
+            <div class="mb-3">
+                <a href="{{ url_for('total.cprg_create') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> 新規作成
+                </a>
+            </div>
+            
+            <!-- データテーブル -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table"></i> 加工集計グループマスタデータ
+                        <span class="badge bg-primary ms-2">{{ cprg_list|length }}件</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if cprg_list %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>操作</th>
+                                    <th>グループID</th>
+                                    <th>グループ名</th>
+                                    <th>製品ID</th>
+                                    <th>製品名</th>
+                                    <th>加工ID</th>
+                                    <th>加工名</th>
+                                    <th>列名</th>
+                                    <th>行名</th>
+                                    <th>列キー</th>
+                                    <th>行キー</th>
+                                    <th>加工後製品ID</th>
+                                    <th>加工後製品名</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cprg in cprg_list %}
+                                <tr>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('total.cprg_edit', cprg_id=cprg.CPRG_ID, cprg_prd_id=cprg.CPRG_PRD_ID, cprg_prc_id=cprg.CPRG_PRC_ID) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-pencil"></i> 編集
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="confirmDelete('{{ cprg.CPRG_ID }}', '{{ cprg.CPRG_PRD_ID }}', {{ cprg.CPRG_PRC_ID }}, '{{ cprg.CPRG_G_NM or '' }}')">
+                                                <i class="bi bi-trash"></i> 削除
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>{{ cprg.CPRG_ID }}</td>
+                                    <td>{{ cprg.CPRG_G_NM or '-' }}</td>
+                                    <td>{{ cprg.CPRG_PRD_ID }}</td>
+                                    <td>{{ cprg.PRD_NAME or '-' }}</td>
+                                    <td>{{ cprg.CPRG_PRC_ID }}</td>
+                                    <td>{{ cprg.PRC_NAME or '-' }}</td>
+                                    <td>{{ cprg.CPRG_COL_NM or '-' }}</td>
+                                    <td>{{ cprg.CPRG_ROW_NM or '-' }}</td>
+                                    <td>{{ cprg.CPRG_COL_KEY or '-' }}</td>
+                                    <td>{{ cprg.CPRG_ROW_KEY or '-' }}</td>
+                                    <td>{{ cprg.CPRG_AF_PRD_ID or '-' }}</td>
+                                    <td>{{ cprg.AF_PRD_NAME or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 該当するデータが見つかりません。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">削除確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>以下の加工集計グループマスタを削除しますか？</p>
+                <div class="alert alert-warning">
+                    <strong>グループID:</strong> <span id="deleteCprgId"></span><br>
+                    <strong>製品ID:</strong> <span id="deleteCprgPrdId"></span><br>
+                    <strong>加工ID:</strong> <span id="deleteCprgPrcId"></span><br>
+                    <strong>グループ名:</strong> <span id="deleteCprgGNm"></span>
+                </div>
+                <p class="text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    この操作は取り消せません。
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> 削除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(cprgId, cprgPrdId, cprgPrcId, cprgGNm) {
+    document.getElementById('deleteCprgId').textContent = cprgId;
+    document.getElementById('deleteCprgPrdId').textContent = cprgPrdId;
+    document.getElementById('deleteCprgPrcId').textContent = cprgPrcId;
+    document.getElementById('deleteCprgGNm').textContent = cprgGNm || '-';
+    
+    const deleteForm = document.getElementById('deleteForm');
+    deleteForm.action = `/total/cprg/${cprgId}/${cprgPrdId}/${cprgPrcId}/delete`;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %} 

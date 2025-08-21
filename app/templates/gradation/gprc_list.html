@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>コンベックス戻り一覧</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('gprc_list') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="spec">規格</label>
+                            <select class="form-control" id="spec" name="spec">
+                                <option value="">すべて</option>
+                                {% for spec in spec_choices %}
+                                    <option value="{{ spec[0] }}" {% if spec[0] == search_spec %}selected{% endif %}>{{ spec[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="color">色</label>
+                            <select class="form-control" id="color" name="color">
+                                <option value="">すべて</option>
+                                {% for color in color_choices %}
+                                    <option value="{{ color[0] }}" {% if color[0] == search_color %}selected{% endif %}>{{ color[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="date_from">戻り日（開始）</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ search_date_from }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="date_to">戻り日（終了）</label>
+                            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ search_date_to }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="stock_status">在庫状況</label>
+                            <select class="form-control" id="stock_status" name="stock_status">
+                                <option value="">すべて</option>
+                                <option value="1" {% if search_stock_status == '1' %}selected{% endif %}>在庫あり</option>
+                                <option value="0" {% if search_stock_status == '0' %}selected{% endif %}>在庫なし</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary" name="searched" value="1">検索</button>
+                        <a href="{{ url_for('gprc_list') }}" class="btn btn-secondary">クリア</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 検索結果件数表示 -->
+    {% if searched == '1' %}
+    <div class="alert alert-info">
+        検索結果: {{ total_count }}件
+        {% if total_count > 500 %}
+            <span class="text-warning">（件数が多いため、表示に時間がかかる場合があります）</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- データ一覧 -->
+    {% if searched == '1' %}
+    <div id="dataTable" class="table-responsive mt-4" {% if total_count > 500 %}style="display: none;"{% endif %}>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>規格</th>
+                    <th>色</th>
+                    <th>戻り日</th>
+                    <th>戻り数</th>
+                    <th>戻り不良数</th>
+                    <th>検品不良数</th>
+                    <th>合格数</th>
+                    <th>ステータス</th>
+                    <th>在庫数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if gprc_list %}
+                    {% for gprc in gprc_list %}
+                    <tr>
+                        <td>{{ gprc.GPRC_ID }}</td>
+                        <td>{{ gprc.GPRR_SPEC_NM }}</td>
+                        <td>{{ gprc.GPRR_COLOR_NM }}</td>
+                        <td>{{ gprc.GPRC_DATE.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ gprc.GPRC_QTY }}</td>
+                        <td>{{ gprc.GPRC_RET_NG_QTY }}</td>
+                        <td>{{ gprc.GPRC_INS_NG_QTY }}</td>
+                        <td>{{ gprc.GPRC_PASS_QTY }}</td>
+                        <td>
+                            {% if gprc.GPRC_STS == 1 or gprc.GPRC_STS == '1' %}
+                                <span class="badge bg-success">完了</span>
+                            {% else %}
+                                <span class="badge bg-danger">未完了</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ gprc.STOCK_QTY }}</td>
+                        <td>
+                            <button class="btn btn-info btn-sm" onclick="inspectGprc({{ gprc.GPRC_ID }}, {{ gprc.GPRC_QTY or 0 }}, {{ gprc.GPRC_RET_NG_QTY or 0 }}, {{ gprc.GPRC_INS_NG_QTY or 0 }}, {{ gprc.GPRC_STS or 0 }})">検査</button>
+                            {% if gprc.GPRC_STS == 1 or gprc.GPRC_STS == '1' %}
+                                <a href="{{ url_for('shipping_create', gprc_id=gprc.GPRC_ID) }}" class="btn btn-success btn-sm">ニデック依頼</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="11" class="text-center">検索条件に一致するデータがありません</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning mt-4">
+        検索条件を入力して「検索」ボタンを押してください。
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+    </div>
+</div>
+
+<!-- 検査モーダル -->
+<div class="modal fade" id="inspectModal" tabindex="-1" aria-labelledby="inspectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="inspectModalLabel">検査データ編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="inspectForm">
+                    <input type="hidden" id="inspect_gprc_id">
+                    <div class="mb-3">
+                        <label for="inspect_qty" class="form-label">戻り数</label>
+                        <input type="number" class="form-control" id="inspect_qty" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inspect_ret_ng_qty" class="form-label">戻り不良数</label>
+                        <input type="number" class="form-control" id="inspect_ret_ng_qty" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inspect_ins_ng_qty" class="form-label">検品不良数</label>
+                        <input type="number" class="form-control" id="inspect_ins_ng_qty" name="ins_ng_qty" min="0" value="0" onchange="calculateInspectPassQty()">
+                    </div>
+                    <div class="mb-3">
+                        <label for="inspect_pass_qty" class="form-label">合格数（自動計算）</label>
+                        <input type="number" class="form-control" id="inspect_pass_qty" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="inspect_sts" name="sts" value="1">
+                            <label class="form-check-label" for="inspect_sts">
+                                完了
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="updateInspect()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 大量データ確認モーダル -->
+<div class="modal fade" id="largeDataModal" tabindex="-1" aria-labelledby="largeDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="largeDataModalLabel">大量データの確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>検索結果が <strong>{{ total_count }}件</strong> あります。</p>
+                <p>大量のデータを表示すると、ブラウザの動作が遅くなる可能性があります。</p>
+                <p>データを表示しますか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideData()">表示しない</button>
+                <button type="button" class="btn btn-primary" onclick="showData()">表示する</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    // 500件超えの場合、確認ダイアログを表示
+    {% if searched == '1' and total_count > 500 %}
+        const largeDataModal = new bootstrap.Modal(document.getElementById('largeDataModal'));
+        largeDataModal.show();
+    {% endif %}
+    
+    // 検査モーダルが閉じられた時の処理
+    const inspectModal = document.getElementById('inspectModal');
+    if (inspectModal) {
+        inspectModal.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('inspectForm').reset();
+        });
+    }
+});
+
+// 検査モーダルを開く
+function inspectGprc(gprcId, qty, retNgQty, insNgQty, sts) {
+    console.log('inspectGprc called:', { gprcId, qty, retNgQty, insNgQty, sts });
+    
+    document.getElementById('inspect_gprc_id').value = gprcId;
+    document.getElementById('inspect_qty').value = qty;
+    document.getElementById('inspect_ret_ng_qty').value = retNgQty;
+    document.getElementById('inspect_ins_ng_qty').value = insNgQty;
+    document.getElementById('inspect_sts').checked = (sts == 1);
+    
+    // 合格数を自動計算
+    calculateInspectPassQty();
+    
+    // Bootstrap 5のモーダルを開く
+    const modal = new bootstrap.Modal(document.getElementById('inspectModal'));
+    modal.show();
+}
+
+// 検査モーダルで合格数を自動計算
+function calculateInspectPassQty() {
+    const qty = parseInt(document.getElementById('inspect_qty').value) || 0;
+    const retNgQty = parseInt(document.getElementById('inspect_ret_ng_qty').value) || 0;
+    const insNgQty = parseInt(document.getElementById('inspect_ins_ng_qty').value) || 0;
+    
+    const passQty = Math.max(0, qty - retNgQty - insNgQty);
+    document.getElementById('inspect_pass_qty').value = passQty;
+}
+
+// 検査データ更新
+function updateInspect() {
+    const gprcId = document.getElementById('inspect_gprc_id').value;
+    const qty = parseInt(document.getElementById('inspect_qty').value) || 0;
+    const retNgQty = parseInt(document.getElementById('inspect_ret_ng_qty').value) || 0;
+    const insNgQty = parseInt(document.getElementById('inspect_ins_ng_qty').value) || 0;
+    
+    // 合格数を自動計算
+    const calculatedPassQty = Math.max(0, qty - retNgQty - insNgQty);
+    
+    const formData = {
+        ins_ng_qty: insNgQty,
+        pass_qty: calculatedPassQty,
+        sts: document.getElementById('inspect_sts').checked ? 1 : 0
+    };
+    
+    // バリデーション
+    if (insNgQty < 0) {
+        alert('検品不良数は0以上の値を入力してください');
+        return;
+    }
+    
+    if (retNgQty + insNgQty > qty) {
+        alert('戻り不良数と検品不良数の合計が戻り数を超えています');
+        return;
+    }
+    
+    fetch(`/gradation/update_convex_inspect/${gprcId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Bootstrap 5のモーダルを閉じる
+            const modal = bootstrap.Modal.getInstance(document.getElementById('inspectModal'));
+            if (modal) {
+                modal.hide();
+            }
+            // ページを再読み込み
+            location.reload();
+        } else {
+            alert('エラー: ' + (data.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    });
+}
+
+// データを表示する
+function showData() {
+    document.getElementById('dataTable').style.display = 'block';
+    const modal = bootstrap.Modal.getInstance(document.getElementById('largeDataModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+// データを表示しない
+function hideData() {
+    document.getElementById('dataTable').style.display = 'none';
+    const modal = bootstrap.Modal.getInstance(document.getElementById('largeDataModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>コンベックス加工データ登録</h2>
+    
+    <!-- 依頼データの表示 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>依頼データ情報</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>依頼ID:</strong> {{ gprr_data.GPRR_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>規格:</strong> {{ gprr_data.GPRR_SPEC_NM }}
+                </div>
+                <div class="col-md-3">
+                    <strong>色:</strong> {{ gprr_data.GPRR_COLOR_NM }}
+                </div>
+                <div class="col-md-3">
+                    <strong>依頼日:</strong> {{ gprr_data.GPRR_REQ_DATE.strftime('%Y-%m-%d') if gprr_data.GPRR_REQ_DATE else '' }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>依頼数量:</strong> {{ gprr_data.GPRR_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>加工残数:</strong> <span id="zanQty">{{ gprr_data.GPRR_PRC_ZAN_QTY }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加工データ入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>加工データ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>戻り日</th>
+                                <th>戻り数</th>
+                                <th>戻り不良数</th>
+                                <th>検品不良数</th>
+                                <th>合格数</th>
+                                <th>ステータス</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括登録</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- GPRC一覧 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>加工データ一覧</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="gprcTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>戻り日</th>
+                            <th>戻り数</th>
+                            <th>戻り不良数</th>
+                            <th>検品不良数</th>
+                            <th>合格数</th>
+                            <th>ステータス</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gprcTableBody">
+                        <!-- JavaScriptで動的に生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('gprr_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">加工データ編集</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="edit_gprc_id">
+                    <div class="form-group">
+                        <label for="edit_date">戻り日</label>
+                        <input type="date" class="form-control" id="edit_date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_qty">戻り数</label>
+                        <input type="number" class="form-control" id="edit_qty" name="qty" required onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ret_ng_qty">戻り不良数</label>
+                        <input type="number" class="form-control" id="edit_ret_ng_qty" name="ret_ng_qty" value="0" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ins_ng_qty">検品不良数</label>
+                        <input type="number" class="form-control" id="edit_ins_ng_qty" name="ins_ng_qty" value="0" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_pass_qty">合格数</label>
+                        <input type="number" class="form-control" id="edit_pass_qty" name="pass_qty" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_sts">ステータス</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_sts" name="sts" value="1">
+                            <label class="form-check-label" for="edit_sts">
+                                完了
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="updateGprc()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    loadGprcList();
+    addRow(); // 初期行を追加
+    
+    // 編集モーダルが閉じられた時の処理
+    $('#editModal').on('hidden.bs.modal', function () {
+        document.getElementById('editForm').reset();
+    });
+});
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td><input type="date" class="form-control date-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" required onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control ret-ng-qty-input" min="0" value="0" onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control ins-ng-qty-input" min="0" value="0" onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control pass-qty-input" readonly></td>
+        <td>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input sts-input" value="1">
+                <label class="form-check-label">
+                    完了
+                </label>
+            </div>
+        </td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+}
+
+// 合格数を自動計算
+function calculatePassQty(changedInput) {
+    const row = changedInput.closest('tr');
+    const qty = parseInt(row.querySelector('.qty-input').value) || 0;
+    const retNgQty = parseInt(row.querySelector('.ret-ng-qty-input').value) || 0;
+    const insNgQty = parseInt(row.querySelector('.ins-ng-qty-input').value) || 0;
+    
+    const passQty = Math.max(0, qty - retNgQty - insNgQty);
+    row.querySelector('.pass-qty-input').value = passQty;
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    let totalQty = 0;
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const date = row.querySelector('.date-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        
+        // 必須項目チェック
+        if (!date || !qty) {
+            alert(`${i + 1}行目: 必須項目（戻り日、戻り数）を入力してください`);
+            return;
+        }
+        
+        const retNgQty = row.querySelector('.ret-ng-qty-input').value || 0;
+        const insNgQty = row.querySelector('.ins-ng-qty-input').value || 0;
+        const passQty = row.querySelector('.pass-qty-input').value || 0;
+        const sts = row.querySelector('.sts-input').checked ? 1 : 0;
+        
+        // 数値の妥当性チェック
+        if (parseInt(qty) <= 0) {
+            alert(`${i + 1}行目: 戻り数は0より大きい値を入力してください`);
+            return;
+        }
+        if (parseInt(retNgQty) < 0 || parseInt(insNgQty) < 0) {
+            alert(`${i + 1}行目: 不良数は0以上の値を入力してください`);
+            return;
+        }
+        
+        // 合格数の妥当性チェック
+        const calculatedPassQty = parseInt(qty) - parseInt(retNgQty) - parseInt(insNgQty);
+        if (calculatedPassQty < 0) {
+            alert(`${i + 1}行目: 戻り不良数と検品不良数の合計が戻り数を超えています`);
+            return;
+        }
+        
+        totalQty += parseInt(qty);
+        
+        formData.push({
+            date: date,
+            qty: qty,
+            ret_ng_qty: retNgQty,
+            ins_ng_qty: insNgQty,
+            pass_qty: calculatedPassQty,
+            sts: sts
+        });
+    }
+    
+    // 依頼数量との比較チェック
+    const requestQty = {{ gprr_data.GPRR_QTY }};
+    if (totalQty > requestQty) {
+        alert(`戻り数の合計(${totalQty})が依頼数量(${requestQty})を超えています`);
+        return;
+    }
+    
+    // 既存の戻り数も考慮したチェック
+    checkExistingTotalQty(totalQty, requestQty, formData);
+});
+
+// 既存の戻り数合計をチェック
+function checkExistingTotalQty(newTotalQty, requestQty, formData) {
+    fetch('/gradation/get_gprc_total_qty/{{ gprr_data.GPRR_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const existingTotal = data.total_qty;
+                const totalQty = existingTotal + newTotalQty;
+                
+                if (totalQty > requestQty) {
+                    alert(`戻り数の合計(${totalQty})が依頼数量(${requestQty})を超えています（既存: ${existingTotal}, 新規: ${newTotalQty}）`);
+                    return;
+                }
+                
+                // 一括登録
+                batchCreateGprc(formData);
+            } else {
+                alert('エラー: ' + (data.error || '既存データの取得に失敗しました'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('既存データの取得中にエラーが発生しました');
+        });
+}
+
+// 一括登録処理
+function batchCreateGprc(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '登録中...';
+    submitBtn.disabled = true;
+    
+    // 各データを順次登録
+    let successCount = 0;
+    let errorCount = 0;
+    let errorDetails = [];
+    
+    const promises = formData.map((data, index) => {
+        return fetch('/gradation/save_gprc_from_gprr/{{ gprr_data.GPRR_ID }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                errorDetails.push(`行${index + 1}: ${errorMsg}`);
+                console.error(`行${index + 1}の登録エラー:`, result.error);
+            }
+        })
+        .catch(error => {
+            errorCount++;
+            const errorMsg = error.toString();
+            errorDetails.push(`行${index + 1}: 通信エラー - ${errorMsg}`);
+            console.error(`行${index + 1}の登録エラー:`, error);
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        if (errorCount === 0) {
+            alert(`${successCount}件のデータを登録しました`);
+            clearForm();
+        } else {
+            // エラー詳細を含むメッセージを作成
+            let errorMessage = `${successCount}件登録成功、${errorCount}件登録失敗しました\n\nエラー詳細:\n`;
+            errorDetails.forEach(detail => {
+                errorMessage += `・${detail}\n`;
+            });
+            alert(errorMessage);
+        }
+        loadGprcList();
+        
+        // ボタンを元に戻す
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// GPRC一覧を取得
+function loadGprcList() {
+    fetch('/gradation/get_gprc_list/{{ gprr_data.GPRR_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayGprcList(data.data);
+                updateGprrZanQty();
+            } else {
+                alert('エラー: ' + (data.error || 'データの取得に失敗しました'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('データの取得中にエラーが発生しました');
+        });
+}
+
+// GPRC一覧を表示
+function displayGprcList(gprcList) {
+    const tbody = document.getElementById('gprcTableBody');
+    tbody.innerHTML = '';
+    
+    if (gprcList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">データがありません</td></tr>';
+        return;
+    }
+    
+    gprcList.forEach(gprc => {
+        const statusText = gprc.GPRC_STS == 1 ? '完了' : '未完了';
+        const statusClass = gprc.GPRC_STS == 1 ? 'badge-success' : 'badge-secondary';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${gprc.GPRC_ID}</td>
+            <td>${gprc.GPRC_DATE}</td>
+            <td>${gprc.GPRC_QTY}</td>
+            <td>${gprc.GPRC_RET_NG_QTY}</td>
+            <td>${gprc.GPRC_INS_NG_QTY}</td>
+            <td>${gprc.GPRC_PASS_QTY || ''}</td>
+            <td>${statusText}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editGprc(${gprc.GPRC_ID}, '${gprc.GPRC_REQ_TO}', '${gprc.GPRC_DATE}', ${gprc.GPRC_QTY}, ${gprc.GPRC_RET_NG_QTY}, ${gprc.GPRC_INS_NG_QTY}, ${gprc.GPRC_PASS_QTY || 'null'}, ${gprc.GPRC_STS || 0})">編集</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteGprc(${gprc.GPRC_ID})">削除</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// 編集モーダルを開く
+function editGprc(gprcId, reqTo, date, qty, retNgQty, insNgQty, passQty, sts) {
+    document.getElementById('edit_gprc_id').value = gprcId;
+    document.getElementById('edit_date').value = date;
+    document.getElementById('edit_qty').value = qty;
+    document.getElementById('edit_ret_ng_qty').value = retNgQty;
+    document.getElementById('edit_ins_ng_qty').value = insNgQty;
+    document.getElementById('edit_pass_qty').value = passQty;
+    document.getElementById('edit_sts').checked = (sts == 1);
+    $('#editModal').modal('show');
+}
+
+// 更新
+function updateGprc() {
+    const gprcId = document.getElementById('edit_gprc_id').value;
+    const qty = document.getElementById('edit_qty').value;
+    const retNgQty = document.getElementById('edit_ret_ng_qty').value || 0;
+    const insNgQty = document.getElementById('edit_ins_ng_qty').value || 0;
+    
+    // 合格数を自動計算
+    const calculatedPassQty = Math.max(0, parseInt(qty) - parseInt(retNgQty) - parseInt(insNgQty));
+    
+    const formData = {
+        date: document.getElementById('edit_date').value,
+        qty: qty,
+        ret_ng_qty: retNgQty,
+        ins_ng_qty: insNgQty,
+        pass_qty: calculatedPassQty,
+        sts: document.getElementById('edit_sts').checked ? 1 : 0
+    };
+    
+    fetch(`/gradation/update_gprc/${gprcId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            $('#editModal').modal('hide');
+            loadGprcList();
+        } else {
+            alert('エラー: ' + (data.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    });
+}
+
+// 削除
+function deleteGprc(gprcId) {
+    if (confirm('このデータを削除してもよろしいですか？')) {
+        fetch(`/gradation/delete_gprc/${gprcId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                loadGprcList();
+            } else {
+                alert('エラー: ' + (data.error || '削除に失敗しました'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+
+// 加工残数を更新
+function updateGprrZanQty() {
+    fetch('/gradation/get_gprr_zan_qty/{{ gprr_data.GPRR_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('zanQty').textContent = data.zan_qty;
+            }
+        })
+        .catch(error => {
+            console.error('Error updating zan qty:', error);
+        });
+}
+
+// 編集モーダルで合格数を自動計算
+function calculateEditPassQty() {
+    const date = document.getElementById('edit_date').value;
+    const qty = document.getElementById('edit_qty').value;
+    const retNgQty = document.getElementById('edit_ret_ng_qty').value;
+    const insNgQty = document.getElementById('edit_ins_ng_qty').value;
+    
+    if (!date || !qty || !retNgQty || !insNgQty) {
+        return;
+    }
+    
+    const calculatedPassQty = Math.max(0, parseInt(qty) - parseInt(retNgQty) - parseInt(insNgQty));
+    document.getElementById('edit_pass_qty').value = calculatedPassQty;
+}
+</script>
+{% endblock %} 

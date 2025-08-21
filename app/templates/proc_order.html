@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">加工手配</h1>
+
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" class="g-3">
+                {{ form.csrf_token }}
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        {{ form.shipment_date.label(class="form-label") }}
+                        {{ form.shipment_date(class="form-control") }}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">検索</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success w-100" onclick="downloadExcel()">Excel</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 加工手配テーブル -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr class="bg-light">
+                    <th>LOT</th>
+                    <th>ベース</th>
+                    <th>加入度数</th>
+                    <th>L/R</th>
+                    <th>色</th>
+                    <th>加工依頼数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.lot }}</td>
+                    <td>{{ order.base }}</td>
+                    <td>{{ order.adp }}</td>
+                    <td>{{ order.lr }}</td>
+                    <td>{{ order.color }}</td>
+                    <td>{{ order.quantity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.table {
+    font-size: 0.9rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.075);
+}
+
+.container-fluid {
+    padding: 20px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.5em 0.8em;
+}
+</style>
+
+<script>
+function resetForm() {
+    window.location.href = "{{ url_for('proc_order') }}";
+}
+
+function selectFolder() {
+    // フォルダ選択ダイアログを表示
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.webkitdirectory = true;
+    input.directory = true;
+    
+    input.onchange = function(e) {
+        if (e.target.files.length > 0) {
+            // 選択されたフォルダのパスを取得
+            const path = e.target.files[0].webkitRelativePath.split('/')[0];
+            document.getElementById('output_dir').value = path;
+        }
+    };
+    
+    input.click();
+}
+
+function downloadExcel() {
+    // Excel出力ボタンを取得
+    const excelButton = document.querySelector('button[onclick="downloadExcel()"]');
+    
+    // 2重送信防止
+    if (excelButton && excelButton.disabled) return;
+    
+    // フォームの値を取得
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    
+    // 日付が選択されているか確認
+    const shipmentDate = formData.get('shipment_date');
+    if (!shipmentDate) {
+        AppAlerts.showError('入力エラー', '出荷日を選択してください。');
+        return;
+    }
+    
+    // ボタンを無効化
+    if (excelButton) {
+        ButtonControl.disable(excelButton, 'Excel出力中...');
+    }
+    
+    // URLSearchParamsに変換
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {  // 空の値は除外
+            params.append(key, value);
+        }
+    }
+    
+    // Excel出力用のURLを構築
+    const url = "{{ url_for('proc_order_export_excel') }}?" + params.toString();
+    
+    // ダウンロードを開始
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                // レスポンスのContent-Typeをチェック
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Excelファイルの出力に失敗しました');
+                    });
+                } else {
+                    throw new Error('Excelファイルの出力に失敗しました');
+                }
+            }
+            
+            // レスポンスのContent-Typeを確認
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                throw new Error('Excelファイルの出力に失敗しました');
+            }
+            
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // ファイル名を日本語対応
+            const shipmentDate = document.querySelector('input[name="shipment_date"]').value;
+            const dateStr = shipmentDate ? shipmentDate.replace(/-/g, '') : new Date().toISOString().slice(0,10).replace(/-/g, '');
+            a.download = `ハードコート指図_${dateStr}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Excel出力エラー:', error);
+            AppAlerts.showError('Excel出力エラー', error.message || 'Excelファイルの出力に失敗しました');
+            // エラー時はボタンを有効化
+            if (excelButton) {
+                ButtonControl.enable(excelButton);
+            }
+        })
+        .finally(() => {
+            // 成功時もボタンを有効化（ダウンロード完了後）
+            setTimeout(() => {
+                if (excelButton) {
+                    ButtonControl.enable(excelButton);
+                }
+            }, 2000);
+        });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>製造明細一覧</h1>
+        <a href="{{ url_for('create_bprd_mei') }}" class="btn btn-success">新規作成</a>
+    </div>
+
+
+    <div class="card mb-4">
+        <div class="card-header">
+            検索条件
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('list_bprd_mei') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label for="prd_id" class="form-label">製品ID</label>
+                    <input type="text" class="form-control" id="prd_id" name="prd_id" value="{{ request.args.get('prd_id', '') }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="lot" class="form-label">ロット</label>
+                    <input type="text" class="form-control" id="lot" name="lot" value="{{ request.args.get('lot', '') }}">
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">検索</button>
+                    <a href="{{ url_for('list_bprd_mei') }}" class="btn btn-secondary">クリア</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>製品ID</th>
+                    <th>ロット</th>
+                    <th>No</th>
+                    <th>数量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mei in mei_list %}
+                <tr>
+                    <td>{{ mei.BPDM_PRD_ID }}</td>
+                    <td>{{ mei.BPDM_LOT }}</td>
+                    <td>{{ mei.BPDM_NO }}</td>
+                    <td>{{ mei.BPDM_QTY }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_bprd_mei', mei_id=mei.BPDM_ID) }}" class="btn btn-primary btn-sm">修正</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">データが見つかりません</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} 

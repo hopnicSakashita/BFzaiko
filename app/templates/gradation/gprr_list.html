@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>コンベックス依頼一覧</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('gprr_list') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="spec">規格</label>
+                            <select class="form-control" id="spec" name="spec">
+                                <option value="">全て</option>
+                                {% for spec in spec_choices %}
+                                    <option value="{{ spec[0] }}" {% if spec[0] == search_spec %}selected{% endif %}>{{ spec[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="color">色</label>
+                            <select class="form-control" id="color" name="color">
+                                <option value="">全て</option>
+                                {% for color in color_choices %}
+                                    <option value="{{ color[0] }}" {% if color[0] == search_color %}selected{% endif %}>{{ color[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="req_date_from">依頼日（開始）</label>
+                            <input type="date" class="form-control" id="req_date_from" name="req_date_from" value="{{ search_req_date_from }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="req_date_to">依頼日（終了）</label>
+                            <input type="date" class="form-control" id="req_date_to" name="req_date_to" value="{{ search_req_date_to }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="flg">フラグ</label>
+                            <select class="form-control" id="flg" name="flg">
+                                <option value="">全て</option>
+                                <option value="0" {% if search_flg == '0' %}selected{% endif %}>残数あり</option>
+                                <option value="1" {% if search_flg == '1' %}selected{% endif %}>残数なし</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary" name="searched" value="1">検索</button>
+                        <a href="{{ url_for('gprr_list') }}" class="btn btn-secondary">クリア</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 検索結果件数表示 -->
+    {% if searched == '1' %}
+    <div class="alert alert-info">
+        検索結果: {{ total_count }}件
+        {% if total_count > 500 %}
+            <span class="text-warning">（件数が多いため、表示に時間がかかる場合があります）</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{{ url_for('create_gprr') }}" class="btn btn-primary">新規作成</a>
+    </div>
+    
+    <!-- データ一覧 -->
+    {% if searched == '1' %}
+    <div id="dataTable" class="table-responsive mt-4" {% if total_count > 500 %}style="display: none;"{% endif %}>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>規格</th>
+                    <th>色</th>
+                    <th>依頼先</th>
+                    <th>依頼日</th>
+                    <th>数量</th>
+                    <th>加工残数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if gprr_list %}
+                    {% for gprr in gprr_list %}
+                    <tr>
+                        <td>{{ gprr.GPRR_ID }}</td>
+                        <td>{{ gprr.GPRR_SPEC }}</td>
+                        <td>{{ gprr.GPRR_COLOR }}</td>
+                        <td>{{ gprr.GPRR_REQ_TO }}</td>
+                        <td>{{ gprr.GPRR_REQ_DATE.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ gprr.GPRR_QTY }}</td>
+                        <td>{{ gprr.GPRR_PRC_ZAN_QTY }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_gprr', gprr_id=gprr.GPRR_ID) }}" class="btn btn-warning">編集</a>
+                            <button onclick="deleteGprr({{ gprr.GPRR_ID }})" class="btn btn-danger">削除</button>
+                            <a href="{{ url_for('gprc_create', gprr_id=gprr.GPRR_ID) }}" class="btn btn-success">入庫</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">検索条件に一致するデータがありません</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning mt-4">
+        検索条件を入力して「検索」ボタンを押してください。
+    </div>
+    {% endif %}
+</div>
+
+<!-- 大量データ確認モーダル -->
+<div class="modal fade" id="largeDataModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">大量データの確認</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>検索結果が <strong>{{ total_count }}件</strong> あります。</p>
+                <p>大量のデータを表示すると、ブラウザの動作が遅くなる可能性があります。</p>
+                <p>データを表示しますか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideData()">表示しない</button>
+                <button type="button" class="btn btn-primary" onclick="showData()">表示する</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    // 500件超えの場合、確認ダイアログを表示
+    {% if searched == '1' and total_count > 500 %}
+        $('#largeDataModal').modal('show');
+    {% endif %}
+});
+
+// データを表示する
+function showData() {
+    document.getElementById('dataTable').style.display = 'block';
+    $('#largeDataModal').modal('hide');
+}
+
+// データを表示しない
+function hideData() {
+    document.getElementById('dataTable').style.display = 'none';
+    $('#largeDataModal').modal('hide');
+}
+
+function deleteGprr(gprrId) {
+    if (confirm('このデータを削除してもよろしいですか？')) {
+        // DELETE APIを呼び出し
+        fetch(`/gradation/delete_gprr/${gprrId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                // ページをリロードして一覧を更新
+                location.reload();
+            } else {
+                alert('エラー: ' + (data.error || '削除に失敗しました'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">製造データCSV取込</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            製造データCSV取込
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="csvImportForm">
+                <div class="mb-3">
+                    <label for="csv_file" class="form-label">CSVファイル</label>
+                    <input type="file" class="form-control" id="csv_file" name="csv_file" required accept=".csv">
+                    <div class="form-text">取り込むCSVファイルを選択してください。</div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="has_header" name="has_header">
+                    <label class="form-check-label" for="has_header">ヘッダー行あり</label>
+                    <div class="form-text">CSVの1行目がヘッダー行の場合はチェックしてください。</div>
+                </div>
+                                
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary" id="submitButton">取り込み実行</button>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">戻る</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // CSV取込フォームの2重送信防止
+    ButtonControl.setupFormSubmitProtection('#csvImportForm', '#submitButton', 'CSV取込中...');
+});
+</script>
+{% endblock %} 

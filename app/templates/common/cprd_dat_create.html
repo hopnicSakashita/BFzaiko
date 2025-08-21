@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}入庫データ新規作成{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>入庫データ新規作成</h2>
+                <a href="{{ url_for('common.cprd_dat_list') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> 一覧に戻る
+                </a>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">入庫データ入力</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('common.cprd_dat_create') }}" id="createForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="prd_id" class="form-label">製品ID <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <select class="form-control" id="prd_id_select" style="border-radius: 0.375rem 0 0 0.375rem;">
+                                            <option value="">選択してください</option>
+                                            {% for prd in prd_list %}
+                                            <option value="{{ prd.PRD_ID }}">{{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME or '' }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <span class="input-group-text" style="border-radius: 0;">または</span>
+                                        <input type="text" class="form-control" id="prd_id_input" name="prd_id" 
+                                               placeholder="製品IDを直接入力" maxlength="5" required
+                                               style="border-radius: 0 0.375rem 0.375rem 0;">
+                                    </div>
+                                    <div class="form-text">製品IDを選択するか、直接入力してください（5文字以内）</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="lot" class="form-label">LOT <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="lot" name="lot" 
+                                           min="0" max="999999" required placeholder="0-999999">
+                                    <div class="form-text">0から999999の範囲で入力</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sprit1" class="form-label">分割番号1</label>
+                                    <input type="number" class="form-control" id="sprit1" name="sprit1" 
+                                           min="0" max="99" placeholder="0-99（未入力時は0）">
+                                    <div class="form-text">0から99の範囲で入力（空の場合は0が設定されます）</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sprit2" class="form-label">分割番号2</label>
+                                    <input type="number" class="form-control" id="sprit2" name="sprit2" 
+                                           min="0" max="99" placeholder="0-99（未入力時は0）">
+                                    <div class="form-text">0から99の範囲で入力（空の場合は0が設定されます）</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="rank" class="form-label">ランク <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="rank" name="rank" required>
+                                        <option value="">選択してください</option>
+                                        {% for rank in rank_list %}
+                                        <option value="{{ rank.KBN_NO }}">{{ rank.KBN_NO }} - {{ rank.KBN_NM }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">ランクを選択してください</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="qty" class="form-label">数量 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="qty" name="qty" 
+                                           min="0" max="99999" required placeholder="0-99999">
+                                    <div class="form-text">0から99999の範囲で入力</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('common.cprd_dat_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> キャンセル
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise"></i> リセット
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> 登録
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 製品IDの選択と入力の連動
+const prdIdSelect = document.getElementById('prd_id_select');
+const prdIdInput = document.getElementById('prd_id_input');
+
+// セレクトボックスが変更されたとき、入力フィールドに値を設定
+prdIdSelect.addEventListener('change', function() {
+    if (this.value) {
+        prdIdInput.value = this.value;
+    } else {
+        prdIdInput.value = '';
+    }
+});
+
+// 入力フィールドが変更されたとき、セレクトボックスをリセット
+prdIdInput.addEventListener('input', function() {
+    if (this.value) {
+        prdIdSelect.value = '';
+    }
+});
+
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    // 入力値の最終チェック
+    let prdId = prdIdInput.value.trim();
+    
+    const lot = parseInt(document.getElementById('lot').value);
+    const sprit1Val = document.getElementById('sprit1').value.trim();
+    const sprit2Val = document.getElementById('sprit2').value.trim();
+    const rank = document.getElementById('rank').value.trim();
+    const qty = parseInt(document.getElementById('qty').value);
+    
+    if (!prdId) {
+        alert('製品IDを入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (prdId.length > 5) {
+        alert('製品IDは5文字以内で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    // マスタとの整合性チェック（入力フィールドの場合のみ）
+    if (prdIdInput.value.trim()) {
+        const prdList = {{ prd_list|tojson if prd_list else '[]' }};
+        const existingPrd = prdList.find(prd => prd.PRD_ID === prdId);
+        if (!existingPrd) {
+            if (!confirm(`製品ID "${prdId}" はマスタに登録されていません。\nこのまま登録しますか？`)) {
+                e.preventDefault();
+                return;
+            }
+        }
+    }
+    
+    if (isNaN(lot) || lot < 0 || lot > 999999) {
+        alert('LOTは0から999999の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    // 分割番号は空の場合もOK
+    if (sprit1Val && (isNaN(parseInt(sprit1Val)) || parseInt(sprit1Val) < 0 || parseInt(sprit1Val) > 99)) {
+        alert('分割番号1は0から99の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (sprit2Val && (isNaN(parseInt(sprit2Val)) || parseInt(sprit2Val) < 0 || parseInt(sprit2Val) > 99)) {
+        alert('分割番号2は0から99の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!rank) {
+        alert('ランクを選択してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (isNaN(qty) || qty < 0 || qty > 99999) {
+        alert('数量は0から99999の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    // 確認メッセージ
+    if (!confirm('この内容で入庫データを登録しますか？\n（フラグは自動的に0が設定されます）')) {
+        e.preventDefault();
+        return;
+    }
+});
+</script>
+{% endblock %} 

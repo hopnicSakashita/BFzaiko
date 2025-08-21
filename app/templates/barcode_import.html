@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}バーコードCSV取込 - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4">バーコードCSV取込</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form id="uploadForm" method="post" enctype="multipart/form-data" action="{{ url_for('barcode_import') }}">
+                <div class="mb-3">
+                    <label for="bbcdKbn" class="form-label">バーコード区分</label>
+                    <select class="form-select" id="bbcdKbn" name="bbcdKbn" required>
+                        <option value="">区分を選択してください</option>
+                        <option value="1">BF</option>
+                        <option value="2">一般</option>
+                        <option value="3">箱詰</option>
+                        <option value="4">検品</option>
+                    </select>
+                    <div class="form-text">
+                        選択した区分の既存データを削除してからCSVデータを登録します
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="file" class="form-label">CSVファイルを選択</label>
+                    <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                    <div class="form-text">
+                        CSVファイルの形式：BBCD_ID（3文字以内）, BBCD_NO（60文字以内）, BBCD_NM（30文字以内）
+                    </div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="hasHeader" name="hasHeader">
+                    <label class="form-check-label" for="hasHeader">ヘッダー行を含む</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="uploadButton">
+                    <i class="bi bi-upload"></i> アップロード
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    {% if result %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">取込結果</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 200px;">総行数</th>
+                            <td>{{ result.total }}</td>
+                        </tr>
+                        <tr>
+                            <th>成功</th>
+                            <td>{{ result.success }}</td>
+                        </tr>
+                        <tr>
+                            <th>スキップ</th>
+                            <td>{{ result.skipped }}</td>
+                        </tr>
+                        <tr>
+                            <th>重複</th>
+                            <td>{{ result.duplicate }}</td>
+                        </tr>
+                        <tr>
+                            <th>エラー</th>
+                            <td>{{ result.error }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if result.errors %}
+            <div class="mt-3">
+                <h6>エラー詳細：</h6>
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        {% for error in result.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const button = document.getElementById('uploadButton');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // ボタンを無効化
+        ButtonControl.disable(button, 'アップロード中...');
+        
+        // フォームを送信
+        this.submit();
+    });
+});
+</script>
+{% endblock %} 

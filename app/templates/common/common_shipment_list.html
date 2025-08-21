@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}出荷一覧{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">出荷一覧</h2>
+            
+            <!-- 検索フォーム -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">検索条件</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('common.shipment_list') }}" id="searchForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="date_from" class="form-label">出荷日（開始）</label>
+                                <input type="date" class="form-control" id="date_from" name="date_from" 
+                                       value="{{ search_date_from or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date_to" class="form-label">出荷日（終了）</label>
+                                <input type="date" class="form-control" id="date_to" name="date_to" 
+                                       value="{{ search_date_to or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="ord_date_from" class="form-label">手配日（開始）</label>
+                                <input type="date" class="form-control" id="ord_date_from" name="ord_date_from" 
+                                       value="{{ search_ord_date_from or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="ord_date_to" class="form-label">手配日（終了）</label>
+                                <input type="date" class="form-control" id="ord_date_to" name="ord_date_to" 
+                                       value="{{ search_ord_date_to or '' }}">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <label for="cshk_to" class="form-label">出荷先</label>
+                                <select class="form-control" id="cshk_to" name="cshk_to">
+                                    <option value="">選択してください</option>
+                                    {% for cztr in cztr_list %}
+                                    <option value="{{ cztr.CZTR_ID }}" {{ 'selected' if search_cshk_to == cztr.CZTR_ID|string else '' }}>
+                                        {{ cztr.CZTR_ID }} - {{ cztr.CZTR_NM or '' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 d-flex">
+                                <button type="submit" name="search" value="1" class="btn btn-primary me-2">検索</button>
+                                <a href="{{ url_for('common.shipment_list') }}" class="btn btn-secondary me-2">クリア</a>
+                                {% if shipment_list %}
+                                <a href="{{ url_for('common.export_shipment_pdf') }}?{{ request.query_string.decode() }}" 
+                                   class="btn btn-success me-2" target="_blank">
+                                    <i class="bi bi-file-pdf"></i> PDF出力
+                                </a>
+                                <button type="button" class="btn btn-info" onclick="saveBarcode()">
+                                    <i class="bi bi-upc"></i> バーコード
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- データ一覧 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        出荷一覧 
+                        {% if shipment_list %}
+                            <span class="badge bg-primary">{{ shipment_list|length }}件</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if is_search_executed %}
+                        {% if shipment_list %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>出荷ID</th>
+                                        <th>出荷日</th>
+                                        <th>手配日</th>
+                                        <th>出荷先</th>
+                                        <th>製品名</th>
+                                        <th>製品ID</th>
+                                        <th>LOT</th>
+                                        <th>ランク</th>
+                                        <th>出荷数量</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for shipment in shipment_list %}
+                                    <tr>
+                                        <td>{{ shipment.CSHK_ID }}</td>
+                                        <td>{{ shipment.CSHK_DT or '－' }}</td>
+                                        <td>{{ shipment.CSHK_ORD_DT or '－' }}</td>
+                                        <td>{{ shipment.SHIPMENT_TO_NAME or '－' }}</td>
+                                        <td>{{ shipment.PRD_DSP_NM or '－' }}</td>
+                                        <td>{{ shipment.CSHK_PRD_ID or '－' }}</td>
+                                        <td>
+                                            {%- if shipment.CPDD_LOT -%}
+                                                {{ '%06d' % shipment.CPDD_LOT }}
+                                                {%- if shipment.CPDD_SPRIT1 -%}
+                                                    -{{ '%02d' % shipment.CPDD_SPRIT1 }}
+                                                {%- endif -%}
+                                                {%- if shipment.CPDD_SPRIT2 -%}
+                                                    -{{ '%02d' % shipment.CPDD_SPRIT2 }}
+                                                {%- endif -%}
+                                            {%- else -%}
+                                                －
+                                            {%- endif -%}
+                                        </td>
+                                        <td>{{ shipment.RANK_NAME or '－' }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ shipment.CSHK_QTY or 0 }}</span>
+                                        </td>
+                                        <td>
+                                            {% if shipment.CSHK_FLG == 0 %}
+                                                <button type="button" class="btn btn-danger btn-sm" 
+                                                        onclick="deleteShipment({{ shipment.CSHK_ID }})">
+                                                    <i class="bi bi-trash"></i> 削除
+                                                </button>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted">検索条件に一致する出荷データが見つかりませんでした。</p>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted">検索条件を入力して「検索」ボタンを押してください。</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 日付フィールドのイベントリスナー
+    const dateFromInput = document.getElementById('date_from');
+    const dateToInput = document.getElementById('date_to');
+    const ordDateFromInput = document.getElementById('ord_date_from');
+    const ordDateToInput = document.getElementById('ord_date_to');
+    
+    // 出荷日：開始日が変更されたとき、終了日の最小値を設定
+    dateFromInput.addEventListener('change', function() {
+        if (this.value) {
+            dateToInput.min = this.value;
+        }
+    });
+    
+    // 出荷日：終了日が変更されたとき、開始日の最大値を設定
+    dateToInput.addEventListener('change', function() {
+        if (this.value) {
+            dateFromInput.max = this.value;
+        }
+    });
+    
+    // 手配日：開始日が変更されたとき、終了日の最小値を設定
+    ordDateFromInput.addEventListener('change', function() {
+        if (this.value) {
+            ordDateToInput.min = this.value;
+        }
+    });
+    
+    // 手配日：終了日が変更されたとき、開始日の最大値を設定
+    ordDateToInput.addEventListener('change', function() {
+        if (this.value) {
+            ordDateFromInput.max = this.value;
+        }
+    });
+    
+    // 初期値設定
+    if (dateFromInput.value) {
+        dateToInput.min = dateFromInput.value;
+    }
+    if (dateToInput.value) {
+        dateFromInput.max = dateToInput.value;
+    }
+    if (ordDateFromInput.value) {
+        ordDateToInput.min = ordDateFromInput.value;
+    }
+    if (ordDateToInput.value) {
+        ordDateFromInput.max = ordDateToInput.value;
+    }
+});
+
+// 出荷データ削除機能
+function deleteShipment(cshkId) {
+    if (!confirm('この出荷データを削除しますか？\nこの操作は取り消せません。')) {
+        return;
+    }
+    
+    // 削除ボタンを無効化
+    const deleteBtn = event.target.closest('button');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 削除中...';
+    
+    fetch('{{ url_for("common.delete_shipment") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            cshk_id: cshkId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 成功時はページを再読み込み
+            location.reload();
+        } else {
+            // エラー時はボタンを元に戻してエラーメッセージを表示
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+            alert('削除に失敗しました: ' + (data.error || '不明なエラー'));
+        }
+    })
+    .catch(error => {
+        // ネットワークエラー時はボタンを元に戻してエラーメッセージを表示
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalText;
+        alert('削除に失敗しました: ' + error.message);
+    });
+}
+
+function saveBarcode() {
+    // フォームの値を取得
+    const form = document.querySelector('#searchForm');
+    const formData = new FormData(form);
+    
+    // URLSearchParamsに変換
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {  // 空の値は除外
+            params.append(key, value);
+        }
+    }
+    
+    // デバッグ情報を出力
+    console.log("バーコード処理: フォームデータ", Object.fromEntries(formData));
+    console.log("バーコード処理: URLパラメータ", params.toString());
+    
+    // バーコード保存用のURLを構築してリダイレクト
+    const url = "{{ url_for('common.shipment_barcode') }}?" + params.toString();
+    console.log("バーコード処理: リダイレクトURL", url);
+    window.location.href = url;
+}
+</script>
+{% endblock %} 

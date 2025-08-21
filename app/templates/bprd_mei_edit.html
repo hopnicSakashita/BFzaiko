@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>製造明細修正</h1>
+
+    <form method="POST" action="{{ url_for('update_bprd_mei', mei_id=mei.BPDM_ID) }}" class="form">
+        <div class="form-group row mb-3">
+            <label class="col-sm-2 col-form-label">製品ID:</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" value="{{ mei.BPDM_PRD_ID }}" readonly>
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-sm-2 col-form-label">ロット:</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" value="{{ mei.BPDM_LOT }}" readonly>
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-sm-2 col-form-label">No:</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" value="{{ mei.BPDM_NO }}" readonly>
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-sm-2 col-form-label">数量:</label>
+            <div class="col-sm-10">
+                <input type="number" name="qty" class="form-control" value="{{ mei.BPDM_QTY }}" required min="0">
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <div class="col-sm-10 offset-sm-2">
+                <button type="submit" class="btn btn-primary">更新</button>
+                <a href="{{ url_for('list_bprd_mei') }}" class="btn btn-secondary">戻る</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %} 

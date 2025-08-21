@@ -1,0 +1,11 @@
+{
+    "terminal": {
+        "defaultProfile": "Command Prompt",
+        "profiles": {
+            "Command Prompt": {
+                "path": "C:\\Windows\\System32\\cmd.exe",
+                "args": []
+            }
+        }
+    }
+} 

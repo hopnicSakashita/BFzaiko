@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}受注データ入力{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.25rem;
+    }
+    .detail-section {
+        margin-top: 1rem;
+    }
+    .qty-input {
+        width: 80px;
+        text-align: right;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4">受注データ入力</h2>
+    
+    <div class="header-section">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="form-group row mb-3">
+                    <label class="col-sm-4 col-form-label">出荷先:</label>
+                    <div class="col-sm-8">
+                        <select id="shipTo" class="form-select">
+                            {% for cztr in cztr_list %}
+                            {% if cztr.CZTR_ID != DatabaseConstants.SHIPMENT_TO_PROCESS %}
+                            <option value="{{ cztr.CZTR_ID }}">{{ cztr.CZTR_NM }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group row mb-3">
+                    <label class="col-sm-4 col-form-label">受注日:</label>
+                    <div class="col-sm-8">
+                        <input type="date" id="orderDate" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group row mb-3">
+                    <label class="col-sm-4 col-form-label">客先注文番号:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="customerOrderNo" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group row mb-3">
+                    <label class="col-sm-4 col-form-label">加工:</label>
+                    <div class="col-sm-8">
+                        <select id="process" class="form-select">
+                            <option value="{{ DatabaseConstants.PROC_NON_COAT }}">{{ HtmlConstants.PROC_TYPE_DISPLAY[DatabaseConstants.PROC_NON_COAT] }}</option>
+                            <option value="{{ DatabaseConstants.PROC_HARD_COAT }}">{{ HtmlConstants.PROC_TYPE_DISPLAY[DatabaseConstants.PROC_HARD_COAT] }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <button onclick="handleDisplay()" class="btn btn-primary me-2">表示</button>
+                <button onclick="handleCancel()" class="btn btn-secondary me-2">キャンセル</button>
+                <button onclick="handleSave()" class="btn btn-success">登録</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <div class="table-responsive">
+            <table id="detailTable" class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>製品ID</th>
+                        <th>ベース</th>
+                        <th>加入度数</th>
+                        <th>L/R</th>
+                        <th>色</th>
+                        <th>数量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in bfsp_list %}
+                    <tr>
+                        <td>{{ item.BFSP_PRD_ID }}</td>
+                        <td>{{ item.BFSP_BASE }}</td>
+                        <td>{{ item.BFSP_ADP }}</td>
+                        <td>{{ item.BFSP_LR }}</td>
+                        <td>{{ item.BFSP_CLR }}</td>
+                        <td><input type="number" class="form-control qty-input" value="0" min="0" max="99999"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 初期設定
+    window.onload = function() {
+        document.getElementById('orderDate').valueAsDate = new Date();
+        setMeisaiInputDisabled(true);
+        setHeaderInputsDisabled(false);
+        clearMeisaiInput();
+        setupQtyInputEvents(); // 数量入力フィールドのイベント設定
+    };
+
+    // 数量入力フィールドのフォーカス/ブラーイベントを設定
+    function setupQtyInputEvents() {
+        const qtyInputs = document.getElementsByClassName('qty-input');
+        Array.from(qtyInputs).forEach(input => {
+            // フォーカス時：値が0の場合は削除
+            input.addEventListener('focus', function() {
+                if (this.value === '0') {
+                    this.value = '';
+                }
+            });
+            
+            // ブラー時：値が空の場合は0を設定
+            input.addEventListener('blur', function() {
+                if (this.value === '' || this.value === null) {
+                    this.value = '0';
+                }
+            });
+        });
+    }
+
+    // 表示ボタンの処理
+    function handleDisplay() {
+        const searchData = {
+            shipTo: document.getElementById('shipTo').value,
+            orderDate: document.getElementById('orderDate').value,
+            customerOrderNo: document.getElementById('customerOrderNo').value,
+            process: document.getElementById('process').value
+        };
+
+        // サーバーにデータを送信して結果を取得
+        fetch('/api/orders/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(searchData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                // 既存データの表示
+                const rows = document.getElementById('detailTable').getElementsByTagName('tr');
+                data.details.forEach(detail => {
+                    for (let i = 0; i < rows.length; i++) {
+                        const cells = rows[i].getElementsByTagName('td');
+                        if (cells.length > 0 && cells[0].textContent === detail.BRCP_PRD_ID) {
+                            const qtyInput = cells[5].getElementsByTagName('input')[0];
+                            if (qtyInput) {
+                                qtyInput.value = detail.BRCP_QTY;
+                            }
+                            break;
+                        }
+                    }
+                });
+
+            }
+            // ヘッダー項目を入力不可に
+            setHeaderInputsDisabled(true);
+            setMeisaiInputDisabled(false);
+            
+        })
+        .catch(error => {
+            console.error('データの検索に失敗しました:', error);
+            AppAlerts.showError('検索エラー', 'データの検索に失敗しました。', error.toString());
+        });
+    }
+
+    // キャンセルボタンの処理
+    function handleCancel() {
+        setMeisaiInputDisabled(true);
+        setHeaderInputsDisabled(false);
+        clearMeisaiInput();
+    }
+
+    // 明細入力ボタンの処理
+    function setMeisaiInputDisabled(flg) {
+        const qtyInputs = document.getElementsByClassName('qty-input');
+        Array.from(qtyInputs).forEach(input => {
+            input.disabled = flg;
+        });
+    }
+
+    function clearMeisaiInput() {
+        const qtyInputs = document.getElementsByClassName('qty-input');
+        Array.from(qtyInputs).forEach(input => {
+            input.value = '0';
+        });
+    }
+
+    // 登録ボタンの処理
+    function handleSave() {
+        // 登録ボタンを取得
+        const saveButton = document.querySelector('button[onclick="handleSave()"]');
+        
+        // 2重送信防止
+        if (saveButton && saveButton.disabled) return;
+        
+        // ボタンを無効化
+        if (saveButton) {
+            ButtonControl.disable(saveButton, '登録中...');
+        }
+        
+        const orderData = {
+            shipTo: document.getElementById('shipTo').value,
+            orderDate: document.getElementById('orderDate').value,
+            customerOrderNo: document.getElementById('customerOrderNo').value,
+            process: document.getElementById('process').value,
+            details: []
+        };
+
+        const rows = document.getElementById('detailTable').getElementsByTagName('tr');
+        Array.from(rows).forEach(row => {
+            const cells = row.getElementsByTagName('td');
+            if (cells.length > 0) {
+                const qtyInput = cells[5].getElementsByTagName('input')[0];
+                if (qtyInput) {
+                    const qty = parseInt(qtyInput.value, 10);
+                    if (qty > 0) {
+                        orderData.details.push({
+                            BRCP_PRD_ID: cells[0].textContent,
+                            BRCP_QTY: qty
+                        });
+                    }
+                }
+            }
+        });
+
+        // サーバーにデータを送信
+        fetch('/api/orders/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        })
+        .then(response => {
+            if (response.ok) {
+                AppAlerts.showSuccess('保存完了', '受注データの保存が完了しました。');
+                setHeaderInputsDisabled(false);
+                setTimeout(() => location.reload(), 1500); // 画面をリロード
+            } else {
+                throw new Error('保存に失敗しました。');
+            }
+        })
+        .catch(error => {
+            console.error('データの保存に失敗しました:', error);
+            AppAlerts.showError('保存エラー', 'データの保存に失敗しました。', error.toString());
+            // エラー時はボタンを有効化
+            if (saveButton) {
+                ButtonControl.enable(saveButton);
+            }
+        });
+    }
+
+    // ヘッダー項目の入力制御
+    function setHeaderInputsDisabled(disabled) {
+        document.getElementById('shipTo').disabled = disabled;
+        document.getElementById('orderDate').disabled = disabled;
+        document.getElementById('customerOrderNo').disabled = disabled;
+        document.getElementById('process').disabled = disabled;
+    }     
+</script>
+{% endblock %} 

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>製造指図書作成 - ワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>製造指図書作成 - ワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                flowchart TD
+                    %% スタイル定義
+                    classDef process fill:#98FB98,stroke:#333,stroke-width:2px,color:#333
+                    classDef decision fill:#FFB6C1,stroke:#333,stroke-width:2px,color:#333
+                    classDef subProcess fill:#F0F8FF,stroke:#333,stroke-width:2px,color:#333
+                    classDef note fill:#FFF8DC,stroke:#333,stroke-width:2px,color:#333
+
+                    %% メインフロー
+                    start([開始]) --> A
+                    A[受注残・レンズ在庫を確認] --> B[受注システム↔在庫システム連携]
+                    B --> C[不足数を算出]
+                    C --> D[出荷日から逆算し完了期限を設定]
+                    D --> E[歩留まりを加味し必要生産数を算出]
+                    E --> F[製品別見込み歩留まりを設定]
+
+                    %% 偏光膜在庫管理
+                    F --> PF1
+                    subgraph process1["① 偏光膜在庫管理"]
+                        PF1[Dropbox偏光膜在庫表確認] --> PF2{在庫充足?}
+                        PF2 -- Yes --> PF3[在庫計上]
+                        PF2 -- No --> PF4{代替膜使用可?}
+                        PF4 -- 可能 --> PF5[代替膜数量計上]
+                        PF4 -- 不可 --> PF6[膜加工予定確認]
+                        PF5 --> PF7[在庫計上日取得]
+                        PF6 --> PF7
+                        PF7 --> PF8[見込み歩留まり50%で数量推定]
+                        PF8 --> PF9[膜在庫システム更新]
+                        PF3 --> PF9
+                    end
+
+                    %% モールド在庫管理
+                    PF9 --> M1
+                    subgraph process2["② モールド在庫管理"]
+                        M1[モールド在庫システム確認] --> M2[使用中モールド控除]
+                        M2 --> M3[離型待ちモールド加算]
+                        M3 --> M4[入荷予定モールド加算]
+                        M4 --> M5{在庫不足?}
+                        M5 -- Yes --> M6[追加購入検討]
+                        M5 -- No --> M7[モールド在庫確定]
+                        M6 --> M7
+                    end
+
+                    %% モノマー選定
+                    M7 --> Mo1
+                    subgraph process3["③ モノマー選定"]
+                        Mo1[候補モノマー23種] --> Mo2{当日5種以内?}
+                        Mo2 -- Yes --> Mo3[禁忌組合せチェック]
+                        Mo2 -- No --> Mo4[日程再調整]
+                        Mo3 --> Mo5[少量品生産日集約]
+                        Mo4 --> Mo5
+                        Mo5 --> Mo6[MR8・MR10優先]
+                        Mo6 --> Mo7[日別モノマー構成確定]
+                    end
+
+                    %% 重合槽充填計画
+                    Mo7 --> R1
+                    subgraph process4["④ 重合槽充填計画"]
+                        R1[重合槽保有数確認] --> R2[R1重合パターン選択]
+                        R2 --> R3[R2重合パターン選択]
+                        R3 --> R4{充填数500枚以上?}
+                        R4 -- No --> R5[バッチ統合検討]
+                        R4 -- Yes --> R6[充填スケジュール確定]
+                        R5 --> R6
+                    end
+
+                    %% 生産性チェック
+                    R6 --> P1
+                    subgraph process5["⑤ 生産性チェック"]
+                        P1[基準：5名×8h=3500枚] --> P2[生産性補正要因確認]
+                        P2 --> P3[補正係数計算]
+                        P3 --> P4{生産能力内?}
+                        P4 -- Yes --> P5[生産計画承認]
+                        P4 -- No --> P6[計画再調整]
+                        P6 --> P2
+                    end
+
+                    P5 --> finish([終了])
+
+                    %% スタイル適用
+                    class start,finish process
+                    class A,B,C,D,E,F process
+                    class PF2,PF4,M5,Mo2,R4,P4 decision
+                    class process1,process2,process3,process4,process5 subProcess
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #98FB98;"></div>
+                <span>プロセス</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #FFB6C1;"></div>
+                <span>判断</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #F0F8FF;"></div>
+                <span>サブプロセス</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>主要プロセスの説明</h3>
+            <h4>メインフロー</h4>
+            <ul>
+                <li>受注残と在庫状況の確認から始まり、必要生産数を算出</li>
+                <li>製品別の歩留まりを考慮した生産計画の立案</li>
+                <li>5つの主要要素（偏光膜、モールド、モノマー、重合槽、生産性）を考慮した指図作成</li>
+            </ul>
+
+            <h4>① 偏光膜在庫管理</h4>
+            <ul>
+                <li>Dropboxの在庫表で現状確認</li>
+                <li>代替膜の使用可否判断と歩留まり考慮</li>
+                <li>膜加工予定の確認と調整</li>
+            </ul>
+
+            <h4>② モールド在庫管理</h4>
+            <ul>
+                <li>現在使用中のモールドと離型待ちモールドの管理</li>
+                <li>入荷予定を含めた在庫状況の把握</li>
+                <li>不足時の追加購入または指図再編成の判断</li>
+            </ul>
+
+            <h4>③ モノマー選定</h4>
+            <ul>
+                <li>1日あたり5種以内の制限管理</li>
+                <li>禁忌組合せの確認と回避</li>
+                <li>効率的な生産のための種類集約</li>
+            </ul>
+
+            <h4>④ 重合槽充填計画</h4>
+            <ul>
+                <li>R1重合とR2重合のパターン選択</li>
+                <li>最小ロット数（500枚）の確保</li>
+                <li>効率的な充填スケジュールの作成</li>
+            </ul>
+
+            <h4>⑤ 生産性チェック</h4>
+            <ul>
+                <li>作業者能力に基づく生産上限の確認</li>
+                <li>各種要因による生産性への影響評価</li>
+                <li>実現可能な生産計画の確定</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

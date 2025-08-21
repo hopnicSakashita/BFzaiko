@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">入庫データCSV取込</h1>
+    
+    
+    <div class="card">
+        <div class="card-header">
+            入庫データCSV取込
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="csvImportCommonForm">
+                <div class="mb-3">
+                    <label for="csv_file" class="form-label">CSVファイル</label>
+                    <input type="file" class="form-control" id="csv_file" name="csv_file" required accept=".csv">
+                    <div class="form-text">取り込むCSVファイルを選択してください。CPRD_DATテーブルに登録されます。</div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="has_header" name="has_header">
+                    <label class="form-check-label" for="has_header">ヘッダー行あり</label>
+                    <div class="form-text">CSVの1行目がヘッダー行の場合はチェックしてください。</div>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> 取込仕様</h6>
+                    <ul class="mb-0">
+                        <li>CSVファイルの75列目と76列目の数量データを処理します</li>
+                        <li>75列目：ランク1としてCPRD_DATに登録</li>
+                        <li>76列目：ランク2としてCPRD_DATに登録</li>
+                        <li>既存データがある場合はスキップされます（重複エラー）</li>
+                        <li>両方の列が0の場合はスキップされます</li>
+                    </ul>
+                </div>
+                                
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary" id="submitButton">取り込み実行</button>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">戻る</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // CSV取込フォームの2重送信防止
+    ButtonControl.setupFormSubmitProtection('#csvImportCommonForm', '#submitButton', 'CSV取込中...');
+});
+</script>
+{% endblock %} 

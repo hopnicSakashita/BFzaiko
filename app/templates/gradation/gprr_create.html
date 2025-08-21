@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>コンベックス加工依頼作成</h2>
+    
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>依頼データ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>規格</th>
+                                <th>色</th>
+                                <th>依頼日</th>
+                                <th>数量</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括登録</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                        <a href="{{ url_for('gprr_list') }}" class="btn btn-secondary">一覧に戻る</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    addRow(); // 初期行を追加
+});
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td>
+            <select class="form-control spec-select" required>
+                <option value="">選択してください</option>
+                {% for spec in spec_choices %}
+                    <option value="{{ spec[0] }}">{{ spec[1] }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <select class="form-control color-select" required>
+                <option value="">選択してください</option>
+                {% for color in color_choices %}
+                    <option value="{{ color[0] }}">{{ color[1] }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="date" class="form-control date-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" required></td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const spec = row.querySelector('.spec-select').value;
+        const color = row.querySelector('.color-select').value;
+        const date = row.querySelector('.date-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        
+        // 必須項目チェック
+        if (!spec || !color || !date || !qty) {
+            alert(`${i + 1}行目: すべての項目を入力してください`);
+            return;
+        }
+        
+        // 数値の妥当性チェック
+        if (parseInt(qty) <= 0) {
+            alert(`${i + 1}行目: 数量は0より大きい値を入力してください`);
+            return;
+        }
+        
+        formData.push({
+            spec: spec,
+            color: color,
+            req_date: date,
+            qty: qty
+        });
+    }
+    
+    // 一括登録
+    batchCreateGprr(formData);
+});
+
+// 一括登録処理
+function batchCreateGprr(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '登録中...';
+    submitBtn.disabled = true;
+    
+    // 各データを順次登録
+    let successCount = 0;
+    let errorCount = 0;
+    let errorDetails = [];
+    
+    const promises = formData.map((data, index) => {
+        return fetch('/gradation/save_gprr', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                errorDetails.push(`行${index + 1}: ${errorMsg}`);
+                console.error(`行${index + 1}の登録エラー:`, result.error);
+            }
+        })
+        .catch(error => {
+            errorCount++;
+            const errorMsg = error.toString();
+            errorDetails.push(`行${index + 1}: 通信エラー - ${errorMsg}`);
+            console.error(`行${index + 1}の登録エラー:`, error);
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        if (errorCount === 0) {
+            alert(`${successCount}件のデータを登録しました`);
+            // 一覧ページにリダイレクト
+            window.location.href = '{{ url_for("gprr_list") }}';
+        } else {
+            // エラー詳細を含むメッセージを作成
+            let errorMessage = `${successCount}件登録成功、${errorCount}件登録失敗しました\n\nエラー詳細:\n`;
+            errorDetails.forEach(detail => {
+                errorMessage += `・${detail}\n`;
+            });
+            alert(errorMessage);
+            // ボタンを元に戻す
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}
+</script>
+{% endblock %} 

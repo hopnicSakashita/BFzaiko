@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>最終出荷作成</h2>
+    
+    <!-- 加工順序の説明 -->
+    <div class="alert alert-info mb-4">
+        <h6><i class="bi bi-info-circle"></i> 加工順序について</h6>
+        <p class="mb-0">
+            <strong>1回目加工（コンベックス）</strong> → <strong>2回目加工（ニデック）</strong> → <strong>最終出荷</strong> の順序で処理を行います。<br>
+            ニデック加工が完了したデータに対して、最終出荷データを作成してください。
+        </p>
+    </div>
+    
+    <!-- 加工データ情報 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>ニデック加工データ情報（2回目加工完了）</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>加工ID:</strong> {{ gprc_data.GPRC_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>依頼ID:</strong> {{ gprc_data.GPRC_REQ_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>規格:</strong> {{ gprc_data.GPRR_SPEC_NM }}
+                </div>
+                <div class="col-md-3">
+                    <strong>色:</strong> {{ gprc_data.GPRR_COLOR_NM }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>戻り日:</strong> {{ gprc_data.GPRC_DATE.strftime('%Y-%m-%d') if gprc_data.GPRC_DATE else '' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>戻り数:</strong> {{ gprc_data.GPRC_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>合格数:</strong> {{ gprc_data.GPRC_PASS_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>出荷可能数:</strong> <span id="availableQty">{{ available_qty }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 出荷データ入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>最終出荷データ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>手配日</th>
+                                <th>出荷日</th>
+                                <th>出荷数量</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括出荷</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('nidec_gprc_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    addRow(); // 初期行を追加
+});
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td><input type="date" class="form-control ord-date-input" required></td>
+        <td><input type="date" class="form-control shipping-date-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" required onchange="validateQty(this)"></td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+}
+
+// 数量の妥当性チェック
+function validateQty(input) {
+    const qty = parseInt(input.value) || 0;
+    const availableQty = parseInt(document.getElementById('availableQty').textContent);
+    
+    if (qty > availableQty) {
+        alert(`出荷数量は出荷可能数(${availableQty})以下で入力してください`);
+        input.value = availableQty;
+    }
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    let totalQty = 0;
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const ordDate = row.querySelector('.ord-date-input').value;
+        const shippingDate = row.querySelector('.shipping-date-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        
+        // 必須項目チェック
+        if (!ordDate || !shippingDate || !qty) {
+            alert(`${i + 1}行目: 必須項目（手配日、出荷日、出荷数量）を入力してください`);
+            return;
+        }
+        
+        // 数値の妥当性チェック
+        if (parseInt(qty) <= 0) {
+            alert(`${i + 1}行目: 出荷数量は0より大きい値を入力してください`);
+            return;
+        }
+        
+        totalQty += parseInt(qty);
+        
+        formData.push({
+            ord_date: ordDate,
+            shipping_date: shippingDate,
+            shipping_qty: qty,
+            shipping_to: 3 // 出荷先を3で固定（最終出荷）
+        });
+    }
+    
+    // 出荷可能数との比較チェック
+    const availableQty = parseInt(document.getElementById('availableQty').textContent);
+    if (totalQty > availableQty) {
+        alert(`出荷数量の合計(${totalQty})が出荷可能数(${availableQty})を超えています`);
+        return;
+    }
+    
+    // 一括出荷
+    batchCreateShipping(formData);
+});
+
+// 一括出荷処理
+function batchCreateShipping(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '出荷中...';
+    submitBtn.disabled = true;
+    
+    // 各データを順次登録
+    let successCount = 0;
+    let errorCount = 0;
+    let errorDetails = [];
+    
+    const promises = formData.map((data, index) => {
+        return fetch('/gradation/create_nidec_shipping_batch/{{ gprc_data.GPRC_ID }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                errorDetails.push(`行${index + 1}: ${errorMsg}`);
+                console.error(`行${index + 1}の出荷エラー:`, result.error);
+            }
+        })
+        .catch(error => {
+            errorCount++;
+            const errorMsg = error.toString();
+            errorDetails.push(`行${index + 1}: 通信エラー - ${errorMsg}`);
+            console.error(`行${index + 1}の出荷エラー:`, error);
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        if (errorCount === 0) {
+            alert(`${successCount}件の出荷を実行しました`);
+            clearForm();
+        } else {
+            // エラー詳細を含むメッセージを作成
+            let errorMessage = `${successCount}件出荷成功、${errorCount}件出荷失敗しました\n\nエラー詳細:\n`;
+            errorDetails.forEach(detail => {
+                errorMessage += `・${detail}\n`;
+            });
+            alert(errorMessage);
+        }
+        
+        // ボタンを元に戻す
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %} 

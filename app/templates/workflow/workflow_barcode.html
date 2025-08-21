@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在庫管理システム - バーコードワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>在庫管理システム - バーコードワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                graph TD
+                    classDef default fill:#0077bb,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef screen fill:#ee7733,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef action fill:#009988,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef decision fill:#ee3377,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef output fill:#999999,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef file fill:#cc88cc,stroke:#fff,stroke-width:2px,color:#fff
+
+                    %% 一般出荷のフロー
+                    A1["出荷一覧画面"] -->|"検索"| A2["検索結果表示"]
+                    A2 -->|"バーコードボタン"| A3["BBCD_DAT"]
+                    A3 -->|"データ登録"| A4["CSVスキャン画面"]
+                    A4 -->|"バーコード選択"| A5["カメラ起動"]
+                    A5 -->|"スキャン"| A7["連続読込"]
+                    A7 -->|"読込完了"| A6{"バーコード検証"}
+                    A6 -->|"有効"| A7
+                    A6 -->|"無効"| A8["カメラオフ・エラー表示"]
+
+                    %% BFのフロー
+                    B1["スキャン画面"] -->|"項目入力"| B2["入力フォーム"]
+                    B2 -->|"表示ボタン"| B3["カメラ起動"]
+                    B3 -->|"スキャン"| B5["連続読込"]
+                    B5 -->|"読込完了"| B4{"バーコード検証"}
+                    B4 -->|"有効"| B5
+                    B4 -->|"無効"| B6["カメラオフ・エラー表示"]
+
+                    %% CSV取込フロー
+                    C1["EXCEL"] -->|"CSV出力"| C2["CSVファイル"]
+                    C2 -->|"ファイル選択"| C3["CSV取込画面"]
+                    C3 -->|"取込実行"| C4["BBCD_DAT"]
+                    C4 -->|"データ登録"| A4
+
+                    class A1,A2,A3,C4 default
+                    class A4,B1,B2,C3 screen
+                    class A5,A7,A8,B3,B5,B6 action
+                    class A6,B4 decision
+                    class B2 output
+                    class C1,C2 file
+
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #0077bb;"></div>
+                <span>基本画面（一覧・検索）</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee7733;"></div>
+                <span>スキャン関連画面</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #009988;"></div>
+                <span>アクション（カメラ操作等）</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee3377;"></div>
+                <span>検証・判断</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #999999;"></div>
+                <span>入力フォーム</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #cc88cc;"></div>
+                <span>ファイル</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>処理フローの説明</h3>
+            <h4>1. 一般出荷バーコードフロー</h4>
+            <ul>
+                <li>出荷一覧画面から検索を実行</li>
+                <li>検索結果からバーコードボタンをクリック</li>
+                <li>BBCD_DATにデータを登録</li>
+                <li>CSVスキャン画面でバーコードを選択</li>
+                <li>カメラを起動してバーコードをスキャン</li>
+                <li>連続読込を実行</li>
+                <li>バーコード検証：
+                    <ul>
+                        <li>有効な場合：連続読込を継続</li>
+                        <li>無効な場合：カメラをオフしてエラー表示</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h4>2. BFバーコードフロー</h4>
+            <ul>
+                <li>スキャン画面で必要な項目を入力</li>
+                <li>表示ボタンをクリックしてカメラを起動</li>
+                <li>バーコードをスキャン</li>
+                <li>連続読込を実行</li>
+                <li>バーコード検証：
+                    <ul>
+                        <li>有効な場合：連続読込を継続</li>
+                        <li>無効な場合：カメラをオフしてエラー表示</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h4>3. CSV取込フロー</h4>
+            <ul>
+                <li>EXCELからCSVファイルを出力</li>
+                <li>CSV取込画面でファイルを選択</li>
+                <li>取込を実行してBBCD_DATに保存</li>
+                <li>CSVスキャン画面に遷移して通常のスキャンフローへ</li>
+            </ul>
+
+            <h4>4. 共通の注意事項</h4>
+            <ul>
+                <li>カメラ起動時は適切な位置にバーコードを合わせる</li>
+                <li>連続読込中はカメラを固定して安定した読み取りを行う</li>
+                <li>エラー時は入力内容を確認して再度実行する</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ニデック加工依頼作成</h2>
+    
+    <!-- 加工順序の説明 -->
+    <div class="alert alert-info mb-4">
+        <h6><i class="bi bi-info-circle"></i> 加工順序について</h6>
+        <p class="mb-0">
+            <strong>1回目加工（コンベックス）</strong> → <strong>2回目加工（ニデック）</strong> → <strong>最終出荷</strong> の順序で処理を行います。<br>
+            コンベックス加工が完了したデータに対して、依頼データを作成してください。
+        </p>
+    </div>
+    
+    <!-- 加工データ情報 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>コンベックス加工データ情報（1回目加工完了）</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>加工ID:</strong> {{ gprc_data.GPRC_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>依頼ID:</strong> {{ gprc_data.GPRC_REQ_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>規格:</strong> {{ gprc_data.GPRR_SPEC_NM }}
+                </div>
+                <div class="col-md-3">
+                    <strong>色:</strong> {{ gprc_data.GPRR_COLOR_NM }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>戻り日:</strong> {{ gprc_data.GPRC_DATE.strftime('%Y-%m-%d') if gprc_data.GPRC_DATE else '' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>戻り数:</strong> {{ gprc_data.GPRC_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>合格数:</strong> {{ gprc_data.GPRC_PASS_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>依頼可能数:</strong> <span id="availableQty">{{ gprc_data.STOCK_QTY }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 依頼データ入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>依頼データ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- 数量サマリー表示 -->
+            <div class="alert alert-info mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>依頼可能数:</strong> <span id="availableQty">{{ gprc_data.STOCK_QTY }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>入力済み合計:</strong> <span id="totalInputQty">0</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>残り数量:</strong> <span id="remainingQty">{{ gprc_data.STOCK_QTY }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>手配日</th>
+                                <th>依頼日</th>
+                                <th>依頼数量</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括依頼</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('gprc_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    addRow(); // 初期行を追加
+});
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td><input type="date" class="form-control ord-date-input" required></td>
+        <td><input type="date" class="form-control shipping-date-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" required onchange="validateQty(this)" oninput="updateTotalQty()"></td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+    updateTotalQty(); // 初期化時に合計を更新
+}
+
+// 数量の妥当性チェック（複数行対応）
+function validateQty(input) {
+    const qty = parseInt(input.value) || 0;
+    const availableQty = parseInt(document.getElementById('availableQty').textContent);
+    
+    // 他の行の合計を計算
+    const otherRowsTotal = calculateOtherRowsTotal(input);
+    const totalWithCurrent = otherRowsTotal + qty;
+    
+    if (totalWithCurrent > availableQty) {
+        const maxAllowed = availableQty - otherRowsTotal;
+        if (maxAllowed <= 0) {
+            alert(`他の行の合計が既に依頼可能数に達しています。この行には数量を入力できません。`);
+            input.value = '';
+        } else {
+            alert(`依頼数量の合計が依頼可能数(${availableQty})を超えます。この行には最大${maxAllowed}まで入力できます。`);
+            input.value = maxAllowed;
+        }
+    }
+    
+    updateTotalQty(); // 合計を更新
+}
+
+// 他の行の合計を計算
+function calculateOtherRowsTotal(currentInput) {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    let total = 0;
+    
+    qtyInputs.forEach(input => {
+        if (input !== currentInput) {
+            total += parseInt(input.value) || 0;
+        }
+    });
+    
+    return total;
+}
+
+// 合計数量を更新
+function updateTotalQty() {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    let total = 0;
+    
+    qtyInputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    
+    const availableQty = parseInt(document.getElementById('availableQty').textContent);
+    const remaining = Math.max(0, availableQty - total);
+    
+    document.getElementById('totalInputQty').textContent = total;
+    document.getElementById('remainingQty').textContent = remaining;
+    
+    // 残り数量が0の場合は警告色に変更
+    const remainingElement = document.getElementById('remainingQty');
+    if (remaining === 0) {
+        remainingElement.style.color = 'red';
+        remainingElement.style.fontWeight = 'bold';
+    } else {
+        remainingElement.style.color = '';
+        remainingElement.style.fontWeight = '';
+    }
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+        updateTotalQty(); // 合計を更新
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+    updateTotalQty(); // 合計を更新
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    let totalQty = 0;
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const ordDate = row.querySelector('.ord-date-input').value;
+        const shippingDate = row.querySelector('.shipping-date-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        
+        // 必須項目チェック
+        if (!ordDate || !shippingDate || !qty) {
+            alert(`${i + 1}行目: 必須項目（手配日、依頼日、依頼数量）を入力してください`);
+            return;
+        }
+        
+        // 数値の妥当性チェック
+        const qtyNum = parseInt(qty);
+        if (qtyNum <= 0) {
+            alert(`${i + 1}行目: 依頼数量は0より大きい値を入力してください`);
+            return;
+        }
+        
+        totalQty += qtyNum;
+        
+        formData.push({
+            ord_date: ordDate,
+            shipping_date: shippingDate,
+            shipping_qty: qty,
+            shipping_to: 2 // 依頼先を2で固定（コンベックス依頼）
+        });
+    }
+    
+    // 依頼可能数との比較チェック
+    const availableQty = parseInt(document.getElementById('availableQty').textContent);
+    if (totalQty > availableQty) {
+        alert(`依頼数量の合計(${totalQty})が依頼可能数(${availableQty})を超えています。\n\n入力内容を確認して、合計数量を${availableQty}以下に調整してください。`);
+        return;
+    }
+    
+    // 最終確認
+    if (!confirm(`以下の内容で依頼を作成しますか？\n\n・依頼件数: ${formData.length}件\n・合計数量: ${totalQty}\n・依頼可能数: ${availableQty}`)) {
+        return;
+    }
+    
+    // 一括依頼
+    batchCreateShipping(formData);
+});
+
+// 一括依頼処理
+function batchCreateShipping(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '処理中...';
+    submitBtn.disabled = true;
+    
+    // 各依頼データを順次作成
+    let processedCount = 0;
+    const totalCount = formData.length;
+    
+    function processNext() {
+        if (processedCount >= totalCount) {
+            // 全て完了
+            alert('依頼が正常に作成されました。');
+            window.location.href = '{{ url_for("gprc_list") }}';
+            return;
+        }
+        
+        const data = formData[processedCount];
+        
+        fetch('/gradation/create_shipping_batch/{{ gprc_data.GPRC_ID }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                processedCount++;
+                processNext();
+            } else {
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                alert(`エラー: ${errorMsg}\n\n処理を停止しました。`);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const errorMsg = error.toString();
+            alert(`依頼の作成中にエラーが発生しました: ${errorMsg}\n\n処理を停止しました。`);
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        });
+    }
+    
+    processNext();
+}
+</script>
+{% endblock %} 

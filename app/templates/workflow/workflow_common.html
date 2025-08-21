@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一般在庫管理システム - ワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>一般在庫管理システム - ワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                graph TD
+                    classDef default fill:#0077bb,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef process fill:#ee7733,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef stock fill:#009988,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef decision fill:#ee3377,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef output fill:#999999,stroke:#fff,stroke-width:2px,color:#fff
+
+                    A1["CSVデータ取込"] --> B["入庫データ一覧"]
+                    A2["新規作成"] --> B
+                    A3["加工戻り"] --> B
+                    B --> C["出荷データ作成"]
+                    C --> D1["出荷"]
+                    C --> D2["加工"]
+                    C --> D3["欠損"]
+                    D1 --> E["出荷一覧"]
+                    D2 --> F["加工依頼一覧"]
+                    F --> G["加工戻りデータ作成"]
+                    G -->|"別製品として新規登録"| A3
+
+                    class A1,A2,A3 default
+                    class B,E,F process
+                    class C,G stock
+                    class D1,D2,D3 decision
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #0077bb;"></div>
+                <span>基本フロー（データ入力・取込）</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee7733;"></div>
+                <span>一覧・管理画面</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #009988;"></div>
+                <span>データ作成処理</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee3377;"></div>
+                <span>処理区分</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>処理フローの説明</h3>
+            <h4>1. データ作成方法</h4>
+            <ul>
+                <li>CSVデータ取込：外部システムからのデータインポート</li>
+                <li>新規作成：手動での新規データ入力</li>
+                <li>加工戻り：加工後の製品を別製品として新規登録</li>
+            </ul>
+
+            <h4>2. 一覧・管理画面</h4>
+            <ul>
+                <li>入庫データ一覧：全ての入庫データの管理・確認</li>
+                <li>出荷一覧：出荷履歴の管理</li>
+                <li>加工依頼一覧：加工依頼状況の管理</li>
+            </ul>
+
+            <h4>3. データ作成処理</h4>
+            <ul>
+                <li>出荷データ作成：出荷・加工・欠損処理の振り分け</li>
+                <li>加工戻りデータ作成：加工完了品を別製品として登録</li>
+            </ul>
+
+            <h4>4. 処理区分</h4>
+            <ul>
+                <li>出荷：製品の出荷処理</li>
+                <li>加工：加工依頼処理</li>
+                <li>欠損：不良品等の処理</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

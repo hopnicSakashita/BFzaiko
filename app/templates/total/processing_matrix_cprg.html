@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>加工集計マトリックス</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('total.processing_matrix_cprg') }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="cprg_id">加工集計グループ</label>
+                            <select class="form-control" id="cprg_id" name="cprg_id" required>
+                                <option value="">選択してください</option>
+                                {% for group in cprg_groups %}
+                                    <option value="{{ group.CPRG_ID }}" {% if search_cprg_id == group.CPRG_ID %}selected{% endif %}>
+                                        {{ group.CPRG_ID }} - {{ group.CPRG_G_NM or '未設定' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary" name="searched" value="1">検索</button>
+                        <a href="{{ url_for('total.processing_matrix_cprg') }}" class="btn btn-secondary">クリア</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 検索結果表示 -->
+    {% if searched == '1' and cprg_details %}
+        <!-- マトリックス表 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>加工集計マトリックス表</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="min-width: 120px;">行名 / 列名</th>
+                                {% set unique_col_keys = cprg_details | map(attribute='CPRG_COL_KEY') | unique | list | sort %}
+                                {% for col_key in unique_col_keys %}
+                                    {% set col_detail = cprg_details | selectattr('CPRG_COL_KEY', 'equalto', col_key) | first %}
+                                    <th class="text-center" style="min-width: 150px;">
+                                        {{ col_detail.CPRG_COL_NM or '未設定' }}
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set unique_row_keys = cprg_details | map(attribute='CPRG_ROW_KEY') | unique | list | sort %}
+                            {% for row_key in unique_row_keys %}
+                                {% set row_detail = cprg_details | selectattr('CPRG_ROW_KEY', 'equalto', row_key) | first %}
+                                <tr>
+                                    <td class="table-secondary fw-bold">
+                                        {{ row_detail.CPRG_ROW_NM or '未設定' }}
+                                    </td>
+                                    {% for col_key in unique_col_keys %}
+                                        {% set key = (col_key, row_key) %}
+                                        {% set data = matrix_data.get(key, {'zaiko': 0, 'kakozan': 0, 'kakougozaiko': 0}) %}
+                                        <td class="text-center">
+                                            {% if data.zaiko > 0 or data.kakozan > 0 or data.kakougozaiko > 0 %}
+                                                <div class="d-flex flex-column">
+                                                    <span class="badge bg-primary mb-1" title="在庫数">
+                                                        {{ data.zaiko }}
+                                                    </span>
+                                                    <span class="badge bg-warning text-dark mb-1" title="加工残数">
+                                                        {{ data.kakozan }}
+                                                    </span>
+                                                    <span class="badge bg-success" title="加工後在庫">
+                                                        {{ data.kakougozaiko }}
+                                                    </span>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+        <!-- 凡例 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>凡例</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>数値の意味</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-primary me-2">数値</span> 在庫数</li>
+                            <li><span class="badge bg-warning text-dark me-2">数値</span> 加工残数</li>
+                            <li><span class="badge bg-success me-2">数値</span> 加工後在庫</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>表示形式</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>「在庫数 / 加工残数 / 加工後在庫」</strong> の形式で表示</li>
+                            <li><strong>「-」</strong> データなし</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elif searched == '1' %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> 指定された条件に一致するデータが見つかりませんでした。
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+        {% if searched == '1' and cprg_details %}
+            <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .alert {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+    .table {
+        font-size: 12px;
+    }
+    .badge {
+        border: 1px solid #000 !important;
+    }
+}
+</style>
+{% endblock %} 

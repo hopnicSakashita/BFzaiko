@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モールド管理システム - ワークフロー</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'メイリオ', 'Meiryo', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0077bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #0077bb;
+            margin-top: 30px;
+        }
+        .workflow-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        .description {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .description h3 {
+            color: #0077bb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>モールド管理システム - ワークフロー</h1>
+        
+        <div class="workflow-container">
+            <div class="mermaid">
+                graph TD
+                    classDef default fill:#0077bb,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef input fill:#ee7733,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef process fill:#009988,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef check fill:#ee3377,stroke:#fff,stroke-width:2px,color:#fff
+                    classDef data fill:#999999,stroke:#fff,stroke-width:2px,color:#fff
+
+                    A["指図書読込"] -->|"データ取込"| B["モールド割出"]
+                    B -->|"空データ作成"| C["検査データ準備"]
+                    C -->|"モールド選択"| D["検査データ入力"]
+                    D -->|"データ登録"| E["検査完了"]
+                    
+                    F["離型検査日入力"] -->|"日付選択"| G["空データ作成"]
+                    G -->|"モールド選択"| H["離型データ入力"]
+                    H -->|"データ登録"| I["離型検査完了"]
+
+                    class A,F input
+                    class B,G process
+                    class C,D,H check
+                    class E,I data
+
+            </div>
+        </div>
+
+        <div class="legend">
+            <h2>凡例</h2>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee7733;"></div>
+                <span>データ入力開始</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #009988;"></div>
+                <span>データ処理</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #ee3377;"></div>
+                <span>検査作業</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: #999999;"></div>
+                <span>完了状態</span>
+            </div>
+        </div>
+
+        <div class="description">
+            <h3>処理フローの説明</h3>
+            <h4>1. 検査データ処理</h4>
+            <ul>
+                <li>指図書の読込：当日の作業指図書を取込</li>
+                <li>モールド割出：使用するモールドを特定</li>
+                <li>検査データ準備：空の検査データを作成</li>
+                <li>検査データ入力：検査数、消耗数などを登録</li>
+            </ul>
+
+            <h4>2. 離型検査処理</h4>
+            <ul>
+                <li>離型検査日入力：離型データを登録する日付を指定</li>
+                <li>空データ作成：抽出ボタンで空の離型データを作成</li>
+                <li>離型データ入力：検査数、消耗数などを登録</li>
+                <li>データベース登録：入力データの保存</li>
+            </ul>
+
+            <h4>3. システムの特徴</h4>
+            <ul>
+                <li>リアルタイムでの在庫状況管理</li>
+                <li>検査データと離型データの一元管理</li>
+                <li>使用履歴の追跡が可能</li>
+                <li>効率的なデータ入力フロー</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html> 

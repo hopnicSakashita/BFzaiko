@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>受注データ検索</h2>
+    
+    <!-- 検索フォーム -->
+    <form method="POST" class="mb-4">
+        {{ form.csrf_token }}
+        <div class="row g-3">
+            <div class="col-md-3">
+                {{ form.order_date.label(class="form-label") }}
+                {{ form.order_date(class="form-control", type="date") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.product_id.label(class="form-label") }}
+                {{ form.product_id(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.base.label(class="form-label") }}
+                {{ form.base(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.adp.label(class="form-label") }}
+                {{ form.adp(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.lr.label(class="form-label") }}
+                {{ form.lr(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.clr.label(class="form-label") }}
+                {{ form.clr(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.proc.label(class="form-label") }}
+                {{ form.proc(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.order_company.label(class="form-label") }}
+                {{ form.order_company(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.order_no.label(class="form-label") }}
+                {{ form.order_no(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.zan_select.label(class="form-label") }}
+                {{ form.zan_select(class="form-select") }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">検索</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- 検索結果テーブル -->
+    {% if request.method == 'POST' %}
+        {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>受注日</th>
+                        <th>ベース</th>
+                        <th>加入度数</th>
+                        <th>L/R</th>
+                        <th>色</th>
+                        <th>加工区分</th>
+                        <th>出荷先</th>
+                        <th>客先受注番号</th>
+                        <th>受注数</th>
+                        <th>受注残</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.BRCP_DT.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ order.BFSP_BASE }}</td>
+                        <td>{{ order.BFSP_ADP }}</td>
+                        <td>{{ order.BFSP_LR }}</td>
+                        <td>{{ order.BFSP_CLR }}</td>
+                        <td>{{ order.BRCP_PROC }}</td>
+                        <td>{{ order.CZTR_NM }}</td>
+                        <td>{{ order.BRCP_ORDER_NO }}</td>
+                        <td>{{ order.BRCP_QTY }}</td>
+                        <td>{{ order.ZAN_QTY }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-3">
+            検索条件に一致する受注データがありません。
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %} 

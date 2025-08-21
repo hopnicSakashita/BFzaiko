@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "加工マスタ編集" if cprc else "加工マスタ新規作成" }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ "bi-pencil-square" if cprc else "bi-plus-circle" }}"></i> 
+                {{ "加工マスタ編集" if cprc else "加工マスタ新規作成" }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 加工マスタ情報{{ "編集" if cprc else "入力" }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('master_cprc_edit', cprc_id=cprc.CPRC_ID) if cprc else url_for('master_cprc_create') }}">
+                        <div class="row g-3">
+                            {% if cprc %}
+                            <div class="col-md-6">
+                                <label for="cprc_id" class="form-label">加工ID</label>
+                                <input type="number" class="form-control" id="cprc_id" name="cprc_id" 
+                                       value="{{ cprc.CPRC_ID }}" readonly>
+                                <div class="form-text">
+                                    加工IDは変更できません
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="col-md-{% if cprc %}6{% else %}6{% endif %}">
+                                <label for="cprc_nm" class="form-label">
+                                    加工名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cprc_nm" name="cprc_nm" 
+                                       value="{{ cprc.CPRC_NM if cprc else '' }}" maxlength="40" required>
+                                <div class="form-text">
+                                    加工の名称（最大40文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-{% if cprc %}12{% else %}6{% endif %}">
+                                <label for="cprc_prd_nm" class="form-label">
+                                    加工前製品名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cprc_prd_nm" name="cprc_prd_nm" 
+                                       value="{{ cprc.CPRC_PRD_NM if cprc else '' }}" maxlength="40" required>
+                                <div class="form-text">
+                                    加工前の製品名（最大40文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprc_to" class="form-label">加工依頼先</label>
+                                <select class="form-select" id="cprc_to" name="cprc_to">
+                                    <option value="">選択してください</option>
+                                    {% if cztr_list %}
+                                        {% for cztr in cztr_list %}
+                                        <option value="{{ cztr.CZTR_ID }}" 
+                                                {% if cprc and cprc.CPRC_TO == cztr.CZTR_ID %}selected{% endif %}>
+                                            {{ cztr.CZTR_ID }} - {{ cztr.CZTR_NM }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <div class="form-text">
+                                    加工を依頼する取引先を選択（CZTR_KBN=2の加工会社のみ）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cprc_time" class="form-label">加工日数</label>
+                                <input type="number" class="form-control" id="cprc_time" name="cprc_time" 
+                                       value="{{ cprc.CPRC_TIME if cprc else '' }}" min="0" max="99">
+                                <div class="form-text">
+                                    加工に必要な日数（0-99日）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cprc_prd_id" class="form-label">製品ID</label>
+                                <select class="form-select" id="cprc_prd_id" name="cprc_prd_id">
+                                    <option value="">選択してください</option>
+                                    {% if prd_list %}
+                                        {% for prd in prd_list %}
+                                        <option value="{{ prd.PRD_ID }}" 
+                                                {% if cprc and cprc.CPRC_PRD_ID == prd.PRD_ID %}selected{% endif %}>
+                                            {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <div class="form-text">
+                                    関連する製品を選択
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cprc_af_prd_id" class="form-label">加工後製品ID</label>
+                                <select class="form-select" id="cprc_af_prd_id" name="cprc_af_prd_id">
+                                    <option value="">選択してください</option>
+                                    {% if prd_list %}
+                                        {% for prd in prd_list %}
+                                        <option value="{{ prd.PRD_ID }}" 
+                                                {% if cprc and cprc.CPRC_AF_PRD_ID == prd.PRD_ID %}selected{% endif %}>
+                                            {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <div class="form-text">
+                                    加工後の製品を選択
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ "更新" if cprc else "登録" }}
+                            </button>
+                            <a href="{{ url_for('master_cprc_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if cprc %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>加工ID:</strong> {{ cprc.CPRC_ID }}</li>
+                                <li><strong>加工名:</strong> {{ cprc.CPRC_NM }}</li>
+                                <li><strong>加工前製品名:</strong> {{ cprc.CPRC_PRD_NM }}</li>
+                                <li><strong>加工依頼先:</strong> 
+                                    {% if cprc.CPRC_TO %}
+                                        {% if cztr_list %}
+                                            {% set found = false %}
+                                            {% for cztr in cztr_list %}
+                                                {% if not found and cztr.CZTR_ID == cprc.CPRC_TO %}
+                                                    {{ cztr.CZTR_ID }} - {{ cztr.CZTR_NM }}
+                                                    {% set found = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not found %}
+                                                {{ cprc.CPRC_TO }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ cprc.CPRC_TO }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>詳細情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>加工日数:</strong> {{ cprc.CPRC_TIME or '-' }}日</li>
+                                <li><strong>製品ID:</strong> 
+                                    {% if cprc.CPRC_PRD_ID %}
+                                        {% if prd_list %}
+                                            {% set found = false %}
+                                            {% for prd in prd_list %}
+                                                {% if not found and prd.PRD_ID == cprc.CPRC_PRD_ID %}
+                                                    {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                                    {% set found = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not found %}
+                                                {{ cprc.CPRC_PRD_ID }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ cprc.CPRC_PRD_ID }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                                <li><strong>加工後製品ID:</strong> 
+                                    {% if cprc.CPRC_AF_PRD_ID %}
+                                        {% if prd_list %}
+                                            {% set found = false %}
+                                            {% for prd in prd_list %}
+                                                {% if not found and prd.PRD_ID == cprc.CPRC_AF_PRD_ID %}
+                                                    {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME }}
+                                                    {% set found = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not found %}
+                                                {{ cprc.CPRC_AF_PRD_ID }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ cprc.CPRC_AF_PRD_ID }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>ハードコート加工</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>加工名:</strong> ハードコート</li>
+                                <li><strong>加工前製品名:</strong> ノンコート製品</li>
+                                <li><strong>加工依頼先:</strong> 601 - 自社（加工会社）</li>
+                                <li><strong>加工日数:</strong> 3日</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>グラデーション加工</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>加工名:</strong> グラデーション</li>
+                                <li><strong>加工前製品名:</strong> ベース製品</li>
+                                <li><strong>加工依頼先:</strong> 602 - 加工会社（グラデーション専門）</li>
+                                <li><strong>加工日数:</strong> 5日</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const cprcNmInput = document.getElementById('cprc_nm');
+    const cprcPrdNmInput = document.getElementById('cprc_prd_nm');
+    const cprcToSelect = document.getElementById('cprc_to');
+    const cprcTimeInput = document.getElementById('cprc_time');
+    const cprcPrdIdSelect = document.getElementById('cprc_prd_id');
+    const cprcAfPrdIdSelect = document.getElementById('cprc_af_prd_id');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // 加工名のバリデーション
+        if (!cprcNmInput.value.trim()) {
+            showError(cprcNmInput, '加工名は必須です。');
+            isValid = false;
+        } else if (cprcNmInput.value.length > 40) {
+            showError(cprcNmInput, '加工名は40文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprcNmInput);
+        }
+        
+        // 加工前製品名のバリデーション
+        if (!cprcPrdNmInput.value.trim()) {
+            showError(cprcPrdNmInput, '加工前製品名は必須です。');
+            isValid = false;
+        } else if (cprcPrdNmInput.value.length > 40) {
+            showError(cprcPrdNmInput, '加工前製品名は40文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprcPrdNmInput);
+        }
+        
+        // 加工依頼先のバリデーション（セレクトボックスなので数値チェックは不要）
+        clearError(cprcToSelect);
+        
+        // 加工日数のバリデーション
+        if (cprcTimeInput.value && (isNaN(cprcTimeInput.value) || cprcTimeInput.value < 0 || cprcTimeInput.value > 99)) {
+            showError(cprcTimeInput, '加工日数は0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cprcTimeInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %} 

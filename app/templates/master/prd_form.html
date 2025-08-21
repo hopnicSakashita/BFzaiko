@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "製品マスタ編集" if prd else "製品マスタ新規作成" }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ "bi-pencil-square" if prd else "bi-plus-circle" }}"></i> {{ "製品マスタ編集" if prd else "製品マスタ新規作成" }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 製品マスタ情報{{ form_type }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('master_prd_edit', prd_id=prd.PRD_ID) if prd else url_for('master_prd_create') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="prd_id" class="form-label">
+                                    製品ID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="prd_id" name="prd_id" 
+                                       value="{{ prd.PRD_ID if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_ID_MAX_LENGTH }}" required
+                                       {% if prd %}readonly{% endif %}>
+                                <div class="form-text">
+                                    製品のID（{% if prd %}編集不可{% else %}最大{{ DatabaseConstants.PRD_ID_MAX_LENGTH }}文字{% endif %}）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_name" class="form-label">
+                                    呼び名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="prd_name" name="prd_name" 
+                                       value="{{ prd.PRD_NAME if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_NAME_MAX_LENGTH }}" required>
+                                <div class="form-text">
+                                    製品の呼び名（最大{{ DatabaseConstants.PRD_NAME_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_monomer" class="form-label">モノマー</label>
+                                <input type="text" class="form-control" id="prd_monomer" name="prd_monomer" 
+                                       value="{{ prd.PRD_MONOMER or '' if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_MONOMER_MAX_LENGTH }}">
+                                <div class="form-text">
+                                    モノマー名（最大{{ DatabaseConstants.PRD_MONOMER_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_kbn" class="form-label">
+                                    商品分類 <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="prd_kbn" name="prd_kbn" required>
+                                    <option value="">選択してください</option>
+                                    <option value="{{ DatabaseConstants.PRD_KBN_PRD }}" {% if prd and prd.PRD_KBN == DatabaseConstants.PRD_KBN_PRD %}selected{% endif %}>{{ DatabaseConstants.PRD_KBN_PRD }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_PRD] }}</option>
+                                    <option value="{{ DatabaseConstants.PRD_KBN_BF }}" {% if prd and prd.PRD_KBN == DatabaseConstants.PRD_KBN_BF %}selected{% endif %}>{{ DatabaseConstants.PRD_KBN_BF }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_BF] }}</option>
+                                    <option value="{{ DatabaseConstants.PRD_KBN_BASE }}" {% if prd and prd.PRD_KBN == DatabaseConstants.PRD_KBN_BASE %}selected{% endif %}>{{ DatabaseConstants.PRD_KBN_BASE }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_BASE] }}</option>
+                                    <option value="{{ DatabaseConstants.PRD_KBN_PROC }}" {% if prd and prd.PRD_KBN == DatabaseConstants.PRD_KBN_PROC %}selected{% endif %}>{{ DatabaseConstants.PRD_KBN_PROC }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_PROC] }}</option>
+                                    <option value="{{ DatabaseConstants.PRD_KBN_OTHER }}" {% if prd and prd.PRD_KBN == DatabaseConstants.PRD_KBN_OTHER %}selected{% endif %}>{{ DatabaseConstants.PRD_KBN_OTHER }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_OTHER] }}</option>
+                                </select>
+                                <div class="form-text">
+                                    商品の分類を選択
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_lower_die" class="form-label">下型</label>
+                                <input type="text" class="form-control" id="prd_lower_die" name="prd_lower_die" 
+                                       value="{{ prd.PRD_LOWER_DIE or '' if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_LOWER_DIE_MAX_LENGTH }}">
+                                <div class="form-text">
+                                    下型名（最大{{ DatabaseConstants.PRD_LOWER_DIE_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_upper_die" class="form-label">上型</label>
+                                <input type="text" class="form-control" id="prd_upper_die" name="prd_upper_die" 
+                                       value="{{ prd.PRD_UPPER_DIE or '' if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_UPPER_DIE_MAX_LENGTH }}">
+                                <div class="form-text">
+                                    上型名（最大{{ DatabaseConstants.PRD_UPPER_DIE_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="prd_film_color" class="form-label">膜カラー</label>
+                                <input type="text" class="form-control" id="prd_film_color" name="prd_film_color" 
+                                       value="{{ prd.PRD_FILM_COLOR or '' if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_FILM_COLOR_MAX_LENGTH }}">
+                                <div class="form-text">
+                                    膜カラー（最大{{ DatabaseConstants.PRD_FILM_COLOR_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="prd_dsp_nm" class="form-label">表示名</label>
+                                <input type="text" class="form-control" id="prd_dsp_nm" name="prd_dsp_nm" 
+                                       value="{{ prd.PRD_DSP_NM or '' if prd else '' }}" maxlength="{{ DatabaseConstants.PRD_DSP_NM_MAX_LENGTH }}">
+                                <div class="form-text">
+                                    表示用の名称（最大{{ DatabaseConstants.PRD_DSP_NM_MAX_LENGTH }}文字）
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ "更新" if prd else "登録" }}
+                            </button>
+                            <a href="{{ url_for('master_prd_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if prd %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> {{ prd.PRD_ID }}</li>
+                                <li><strong>呼び名:</strong> {{ prd.PRD_NAME }}</li>
+                                <li><strong>モノマー:</strong> {{ prd.PRD_MONOMER or '-' }}</li>
+                                <li><strong>商品分類:</strong> 
+                                    {% if prd.PRD_KBN in HtmlConstants.PRD_KBN_DISPLAY %}
+                                        {{ prd.PRD_KBN }} - {{ HtmlConstants.PRD_KBN_DISPLAY[prd.PRD_KBN] }}
+                                    {% else %}
+                                        {{ prd.PRD_KBN }}
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>詳細情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>下型:</strong> {{ prd.PRD_LOWER_DIE or '-' }}</li>
+                                <li><strong>上型:</strong> {{ prd.PRD_UPPER_DIE or '-' }}</li>
+                                <li><strong>膜カラー:</strong> {{ prd.PRD_FILM_COLOR or '-' }}</li>
+                                <li><strong>表示名:</strong> {{ prd.PRD_DSP_NM or '-' }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if not prd %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>製造レンズの例</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> PRD01</li>
+                                <li><strong>呼び名:</strong> 標準レンズ</li>
+                                <li><strong>モノマー:</strong> メタクリル酸メチル</li>
+                                <li><strong>商品分類:</strong> {{ DatabaseConstants.PRD_KBN_PRD }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_PRD] }}</li>
+                                <li><strong>下型:</strong> DIE001</li>
+                                <li><strong>上型:</strong> DIE002</li>
+                                <li><strong>膜カラー:</strong> 透明</li>
+                                <li><strong>表示名:</strong> 標準レンズ（透明）</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>BFの例</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>製品ID:</strong> BF001</li>
+                                <li><strong>呼び名:</strong> BF基材</li>
+                                <li><strong>モノマー:</strong> ビスフェノールA</li>
+                                <li><strong>商品分類:</strong> {{ DatabaseConstants.PRD_KBN_BF }} - {{ HtmlConstants.PRD_KBN_DISPLAY[DatabaseConstants.PRD_KBN_BF] }}</li>
+                                <li><strong>下型:</strong> DIE003</li>
+                                <li><strong>上型:</strong> DIE004</li>
+                                <li><strong>膜カラー:</strong> ブラウン</li>
+                                <li><strong>表示名:</strong> BF基材（ブラウン）</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// サーバーサイドの定数をJavaScriptで使用するための変数
+const PRD_ID_MAX_LENGTH = {{ DatabaseConstants.PRD_ID_MAX_LENGTH }};
+const PRD_NAME_MAX_LENGTH = {{ DatabaseConstants.PRD_NAME_MAX_LENGTH }};
+const PRD_MONOMER_MAX_LENGTH = {{ DatabaseConstants.PRD_MONOMER_MAX_LENGTH }};
+const PRD_LOWER_DIE_MAX_LENGTH = {{ DatabaseConstants.PRD_LOWER_DIE_MAX_LENGTH }};
+const PRD_UPPER_DIE_MAX_LENGTH = {{ DatabaseConstants.PRD_UPPER_DIE_MAX_LENGTH }};
+const PRD_FILM_COLOR_MAX_LENGTH = {{ DatabaseConstants.PRD_FILM_COLOR_MAX_LENGTH }};
+const PRD_DSP_NM_MAX_LENGTH = {{ DatabaseConstants.PRD_DSP_NM_MAX_LENGTH }};
+
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const prdIdInput = document.getElementById('prd_id');
+    const prdNameInput = document.getElementById('prd_name');
+    const prdMonomerInput = document.getElementById('prd_monomer');
+    const prdLowerDieInput = document.getElementById('prd_lower_die');
+    const prdUpperDieInput = document.getElementById('prd_upper_die');
+    const prdFilmColorInput = document.getElementById('prd_film_color');
+    const prdDspNmInput = document.getElementById('prd_dsp_nm');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        {% if not prd %}
+        // 製品IDのバリデーション（新規作成時のみ）
+        if (!prdIdInput.value.trim()) {
+            showError(prdIdInput, '製品IDは必須です。');
+            isValid = false;
+        } else if (prdIdInput.value.length > PRD_ID_MAX_LENGTH) {
+            showError(prdIdInput, '製品IDは' + PRD_ID_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdIdInput);
+        }
+        {% endif %}
+        
+        // 呼び名のバリデーション
+        if (!prdNameInput.value.trim()) {
+            showError(prdNameInput, '呼び名は必須です。');
+            isValid = false;
+        } else if (prdNameInput.value.length > PRD_NAME_MAX_LENGTH) {
+            showError(prdNameInput, '呼び名は' + PRD_NAME_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdNameInput);
+        }
+        
+        // モノマーのバリデーション
+        if (prdMonomerInput.value && prdMonomerInput.value.length > PRD_MONOMER_MAX_LENGTH) {
+            showError(prdMonomerInput, 'モノマーは' + PRD_MONOMER_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdMonomerInput);
+        }
+        
+        // 下型のバリデーション
+        if (prdLowerDieInput.value && prdLowerDieInput.value.length > PRD_LOWER_DIE_MAX_LENGTH) {
+            showError(prdLowerDieInput, '下型は' + PRD_LOWER_DIE_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdLowerDieInput);
+        }
+        
+        // 上型のバリデーション
+        if (prdUpperDieInput.value && prdUpperDieInput.value.length > PRD_UPPER_DIE_MAX_LENGTH) {
+            showError(prdUpperDieInput, '上型は' + PRD_UPPER_DIE_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdUpperDieInput);
+        }
+        
+        // 膜カラーのバリデーション
+        if (prdFilmColorInput.value && prdFilmColorInput.value.length > PRD_FILM_COLOR_MAX_LENGTH) {
+            showError(prdFilmColorInput, '膜カラーは' + PRD_FILM_COLOR_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdFilmColorInput);
+        }
+        
+        // 表示名のバリデーション
+        if (prdDspNmInput.value && prdDspNmInput.value.length > PRD_DSP_NM_MAX_LENGTH) {
+            showError(prdDspNmInput, '表示名は' + PRD_DSP_NM_MAX_LENGTH + '文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(prdDspNmInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %} 

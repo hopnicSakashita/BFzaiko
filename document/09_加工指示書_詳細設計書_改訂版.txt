@@ -1,0 +1,339 @@
+====================================================================
+在庫管理システム - 加工指示書画面 詳細設計書（改訂版）
+====================================================================
+
+■ 1. 画面概要
+====================================================================
+【画面名】
+　加工指示書画面（加工手配画面）
+
+【画面目的】
+　指定出荷日のハードコート加工対象データを検索・一覧表示し、
+　加工指示書をExcel形式で出力する機能を提供する。
+
+【アクセス情報】
+　- URL: /proc_order
+　- HTTP メソッド: GET（初期表示）/POST（検索実行）
+　- 認証: 必須（ログイン後のみアクセス可能）
+　- Excel出力: GET /proc_order_export_excel
+
+■ 2. 業務概要
+====================================================================
+【主要業務】
+　1. 出荷日による加工対象データの検索・表示
+　2. 加工依頼数の一覧表示
+　3. 検索結果のExcel出力（加工指示書作成）
+
+【重要な業務ルール】
+　- 出荷先ID=DatabaseConstants.SHIPMENT_TO_PROCESS（加工宛）のデータのみ表示対象
+　- 未出荷の有効な出荷データのみ対象（BSHK_FLG = DatabaseConstants.BSHK_FLG_NOT_SHIPPED）
+　- 指定出荷日のデータのみ抽出
+　- 製品規格ソート順で表示（BFSP_SORT順）
+
+【検索対象条件】
+　- 出荷日: 必須入力（指定日の加工対象データを抽出）
+
+■ 3. 画面レイアウト
+====================================================================
+【3.1 レイアウト構造】
+```
+├── 共通ヘッダー・ナビゲーション
+├── ページタイトル「加工手配」
+├── 検索フォーム
+│   ├── 出荷日（必須入力）
+│   ├── 検索ボタン
+│   └── Excelボタン
+└── 検索結果テーブル
+    ├── テーブルヘッダー
+    │   ├── LOT
+    │   ├── ベース
+    │   ├── 加入度数
+    │   ├── L/R
+    │   ├── 色
+    │   └── 加工依頼数
+    └── データ行（検索結果）
+```
+
+【3.2 テーブル表示例】
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        加工手配一覧                              │
+├──────┬──────┬─────────┬──────┬──────┬─────────┤
+│ LOT  │ベース│加入度数  │ L/R  │ 色   │加工依頼数│
+├──────┼──────┼─────────┼──────┼──────┼─────────┤
+│ 123  │  2   │  150    │  L   │ BR   │   10    │
+│ 124  │  4   │  200    │  R   │ SG   │    5    │
+└──────┴──────┴─────────┴──────┴──────┴─────────┘
+```
+
+■ 4. データ項目仕様
+====================================================================
+【4.1 検索条件項目】
+
+◆ 出荷日
+　- 項目名: shipment_date
+　- 必須/任意: 必須
+　- 入力方式: 日付選択フィールド
+　- フォーマット: YYYY-MM-DD
+　- 説明: 加工指示対象の出荷日を指定
+
+【4.2 表示項目】
+
+◆ LOT
+　- 表示内容: 製造ロット番号
+　- 業務的意味: 製造バッチの識別番号
+
+◆ ベース
+　- 表示内容: レンズのベースカーブ値
+　- 業務的意味: レンズの基本仕様
+
+◆ 加入度数
+　- 表示内容: レンズの度数
+　- 業務的意味: 遠近両用レンズの度数
+
+◆ L/R
+　- 表示内容: L（左）または R（右）
+　- 業務的意味: 左右の目用識別
+
+◆ 色
+　- 表示内容: レンズの色コード（BR、SG等）
+　- 業務的意味: レンズの色種別
+
+◆ 加工依頼数
+　- 表示内容: 加工対象数量
+　- 業務的意味: ハードコート加工を依頼する数量
+
+■ 5. 業務ロジック
+====================================================================
+【5.1 データ取得条件】
+
+◆ 基本フィルタリング条件
+　- 出荷先ID = DatabaseConstants.SHIPMENT_TO_PROCESS（加工宛）のデータのみ対象
+　- 未出荷の有効データ: BSHK_FLG = DatabaseConstants.BSHK_FLG_NOT_SHIPPED
+　- 指定出荷日の出荷データのみ: CAST(BSHK_DT AS DATE) = CAST(指定出荷日 AS DATE)
+
+◆ データ結合ルール
+　- 基本テーブル: BSHK_DAT（出荷データ）
+　- 製造データ結合: BPRD_DAT（製造データ）結合条件 BSHK_PDD_ID = BPDD_ID
+　- 製品情報結合: BFSP_MST（BF規格マスタ）結合条件 BPDD_PRD_ID = BFSP_PRD_ID
+
+【5.2 表示順序ルール】
+　- BFSP_SORT（製品規格ソート順）で並び替え
+　- 製品マスタで定義された標準的な表示順序
+
+【5.3 Excel出力ルール】
+
+◆ テンプレート使用
+　- 環境変数からテンプレートファイルパス取得: PROC_EXCEL_PATH
+　- テンプレートの「原紙」シートを使用
+　- 出力ファイル名: 「ハードコート指図_YYYYMMDD.xlsx」
+　- 一時ディレクトリでの処理・自動削除
+
+◆ シート分割ルール
+　- 1シートあたり最大ExcelConstants.MAX_ROWS_PER_SHEET件のデータを記載
+　- 超過時は新規シートを作成（シート名: 1、2、3...）
+　- テンプレートの「原紙」シートは最終的に削除
+
+◆ データ記載ルール
+　- 書き込み開始行: ExcelConstants.WRITE_START_ROW行目から
+　- カゴ番号（連番）を自動採番
+　- 各項目を指定セルに記載
+　  * A列（ExcelConstants.COLUMN_BASKET_NO）:カゴ番号
+　  * U列（ExcelConstants.COLUMN_LOT）:LOT
+　  * B列（ExcelConstants.COLUMN_BASE）:ベース
+　  * C列（ExcelConstants.COLUMN_ADP）:加入度数
+　  * D列（ExcelConstants.COLUMN_LR）:L/R
+　  * E列（ExcelConstants.COLUMN_COLOR）:色
+　  * T列（ExcelConstants.COLUMN_QUANTITY）:数量
+　  * V列（ExcelConstants.COLUMN_BSHK_ID）:BSHK_ID
+
+■ 6. 処理フロー
+====================================================================
+【6.1 メイン処理フロー】
+```
+1. ユーザーが加工指示書画面（/proc_order）にアクセス
+　　↓
+2. 認証チェック（@login_required）
+　　↓
+3. routes.py の proc_order() 関数実行
+　　↓
+4. GET方式: 初期画面表示（空のフォーム）
+   POST方式: 検索処理実行
+　　↓
+5. 出荷日の入力チェック・バリデーション
+　　├─ 出荷日未入力チェック
+　　└─ 日付フォーマットチェック（YYYY-MM-DD → datetime変換）
+　　↓
+6. Shipment.get_by_dt_CT() メソッド呼び出し
+　　↓
+7. 加工対象データの取得・整形
+　　↓
+8. proc_order.html テンプレートレンダリング
+　　↓
+9. 検索結果一覧表示
+```
+
+【6.2 Excel出力処理フロー】
+```
+1. Excelボタンクリック（/proc_order_export_excel）
+　　↓
+2. 出荷日パラメータ取得・検証
+　　├─ ProcOrderSearchForm(request.args)でフォーム生成
+　　├─ shipment_date未入力チェック
+　　└─ 日付データ型確認
+　　↓
+3. Shipment.get_by_dt_CT() で対象データ再取得
+　　├─ 該当データなしの場合: JSONエラーレスポンス（404）
+　　└─ データ存在時: 次の処理へ
+　　↓
+4. 一時ディレクトリ作成・write_to_proc_excel() 関数呼び出し
+　　├─ tempfile.mkdtemp()で一時ディレクトリ作成
+　　├─ Excel生成処理実行
+　　└─ ファイル存在確認
+　　↓
+5. ファイルダウンロード・レスポンス作成
+　　├─ ファイル読み込み（バイナリデータ）
+　　├─ Content-TypeとContent-Dispositionヘッダー設定
+　　├─ ファイル名のURLエンコード処理
+　　└─ make_response()でダウンロードレスポンス生成
+　　↓
+6. 一時ディレクトリ・ファイル削除（finally句）
+　　└─ shutil.rmtree(temp_dir)で確実にクリーンアップ
+```
+
+【6.3 Excel生成詳細フロー】
+```
+write_to_proc_excel() 内部処理:
+1. 環境変数・テンプレートファイル検証
+　　├─ load_dotenv()で環境変数読み込み
+　　├─ PROC_EXCEL_PATHの存在チェック
+　　└─ テンプレートファイルの妥当性検証
+　　↓
+2. 出力先ディレクトリ設定・テンプレートコピー
+　　├─ 指定ディレクトリまたは日付フォルダに出力
+　　├─ os.makedirs(output_dir, exist_ok=True)
+　　└─ shutil.copy2()でテンプレートコピー
+　　↓
+3. Excelワークブック・シート初期化
+　　├─ openpyxl.load_workbook()でファイル読み込み
+　　├─ テンプレートシート保持
+　　└─ 最初のワークシートを作成・設定
+　　↓
+4. データ書き込みループ処理
+　　├─ カゴ番号連番生成
+　　├─ 最大行数チェック・必要時新シート作成
+　　├─ 各セルへのデータ書き込み
+　　└─ 行カウンタ更新
+　　↓
+5. ワークブック保存・クリーンアップ
+　　├─ 「原紙」シート削除
+　　├─ wb.save()でファイル保存
+　　└─ wb.close()でリソース解放
+```
+
+■ 7. エラーハンドリング
+====================================================================
+【7.1 入力エラー】
+　- 出荷日未入力: 「出荷日を入力してください。」
+　- 日付形式エラー: 「日付の形式が正しくありません。」
+　- 該当データなし: 「該当する出荷データが見つかりませんでした。」（JSONレスポンス 404）
+
+【7.2 Excel出力エラー】
+　- テンプレート不正: ErrorMessages.FILE_NOT_FOUND, ErrorMessages.EXCEL_TEMPLATE_INVALID
+　- ファイル作成失敗: ErrorMessages.FILE_CREATION_FAILED, ErrorMessages.EXCEL_CREATION_ERROR
+　- 権限エラー: ErrorMessages.FILE_PERMISSION_DENIED
+　- メモリエラー: ErrorMessages.EXCEL_MEMORY_ERROR
+　- 全てJSONレスポンス（500）で返却
+
+【7.3 システムエラー】
+　- データベース接続エラー: flashメッセージでエラー表示
+　- 予期せぬエラー: 統合エラーログに記録
+　- 一時ディレクトリ削除失敗: ログ出力のみ（処理継続）
+
+【7.4 ログ出力】
+　- エラー発生時は app.log ファイルに詳細を記録
+　- models.py の log_error() 関数を使用
+　- 検索条件とエラー内容を併せて記録
+　- Excel生成時のエラーはtraceback付きで詳細記録
+
+■ 8. 関連ファイル・関数
+====================================================================
+【8.1 主要ファイル・関数】
+
+◆ ルーティング
+　- ファイル: app/routes.py
+　- 関数: proc_order()
+　- 機能: 加工指示書画面の表示制御、検索処理
+　- 認証: @login_required デコレータ
+　- HTTPメソッド: GET/POST
+
+◆ Excel出力ルーティング
+　- ファイル: app/routes.py
+　- 関数: proc_order_export_excel()
+　- 機能: Excel出力処理の制御、ファイルダウンロード
+　- HTTPメソッド: GET
+　- レスポンス形式: Excel添付ファイルまたはJSONエラー
+
+◆ データ取得モデル
+　- ファイル: app/shipment.py
+　- クラス: Shipment
+　- 関数: get_by_dt_CT(shipment_date)
+　- 機能: 指定出荷日の加工対象データ取得
+　- 呼び出し元: routes.py の proc_order(), proc_order_export_excel()
+
+◆ フォーム定義
+　- ファイル: app/forms.py
+　- クラス: ProcOrderSearchForm
+　- 機能: 加工手配検索フォームの定義
+　- 項目: shipment_date（出荷日）
+
+◆ Excel出力処理
+　- ファイル: app/export_excel.py
+　- 関数: write_to_proc_excel(shipment_date, data, output_dir)
+　- 機能: 加工指示書Excelファイル生成
+　- 呼び出し元: routes.py の proc_order_export_excel()
+　- 使用ライブラリ: openpyxl, shutil, os
+
+◆ テンプレート
+　- ファイル: app/templates/proc_order.html
+　- 機能: 加工指示書画面のHTML表示
+　- 継承: base.html
+
+【8.2 データベーステーブル】
+
+◆ BSHK_DAT（出荷データテーブル）
+　- 主要項目: BSHK_TO（出荷先）、BSHK_DT（出荷日）、BSHK_QTY（数量）、BSHK_FLG（出荷ステータス）、BSHK_ID（出荷ID）
+　- 業務用途: 加工指示の基準となる出荷データ
+
+◆ BPRD_DAT（製造データテーブル）
+　- 主要項目: BPDD_ID（製造ID）、BPDD_PRD_ID（製品ID）、BPDD_LOT（LOT）
+　- 業務用途: 製造ロット情報の取得
+
+◆ BFSP_MST（BF規格マスタテーブル）
+　- 主要項目: BFSP_PRD_ID（製品ID）、BFSP_BASE（ベース）、BFSP_ADP（加入度数）、BFSP_LR（L/R）、BFSP_CLR（色）、BFSP_SORT（ソート順）
+　- 業務用途: 製品仕様情報と表示順序
+
+【8.3 重要な業務関数】
+　- log_error(): 統一エラーログ記録（traceback付き）
+　- get_db_session(): データベースセッション管理
+　- load_dotenv(): 環境変数読み込み
+
+【8.4 定数・設定】
+　- DatabaseConstants.SHIPMENT_TO_PROCESS: 加工宛出荷先ID
+　- DatabaseConstants.BSHK_FLG_NOT_SHIPPED: 未出荷フラグ
+　- ExcelConstants.TEMPLATE_SHEET_NAME: テンプレートシート名（「原紙」）
+　- ExcelConstants.HARDCOAT_FILENAME_TEMPLATE: 出力ファイル名テンプレート
+　- ExcelConstants.WRITE_START_ROW: 書き込み開始行番号
+　- ExcelConstants.MAX_ROWS_PER_SHEET: シート当たり最大行数
+　- ExcelConstants.COLUMN_*: 各列の位置定義
+　- ErrorMessages.*: エラーメッセージ定数
+
+【8.5 環境変数・設定ファイル】
+　- PROC_EXCEL_PATH: 加工指示書テンプレートファイルパス
+　- .env: 環境変数設定ファイル
+
+【8.6 関連画面・機能】
+　- ノンコート在庫検索画面: ノンコート在庫からの出荷作成
+　- ハードコート在庫検索画面: ハードコート在庫からの出荷作成
+　- 出荷一覧画面: 出荷実績の確認
+　- ハードコートExcel読込画面: 加工完了報告の受付

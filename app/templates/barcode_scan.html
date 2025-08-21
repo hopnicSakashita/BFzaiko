@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>バーコード読込</h2>
+    
+    <!-- バーコード生成セクション -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>バーコード生成</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="productSelect">製品選択</label>
+                        <select id="productSelect" class="form-control">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="coatingDate">コート日</label>
+                        <input type="date" class="form-control" id="coatingDate">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="lotNumber">ロット</label>
+                        <input type="date" class="form-control" id="lotNumber">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="barcodeType">出荷先</label>
+                        <select id="barcodeType" class="form-control">
+                            <option value="">選択してください</option>
+                            <option value="younger">ヤンガー</option>
+                            <option value="sunray">サンレー</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="coatingType">コーティング</label>
+                        <select id="coatingType" class="form-control">
+                            <option value="">選択してください</option>
+                            <option value="1">HC</option>
+                            <option value="0">NC</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-primary form-control" id="generateBtn">表示</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <form id="barcodeForm">
+                        <div class="form-group">
+                            <label for="barcodeInput">バーコード入力</label>
+                            <input type="text" class="form-control" id="barcodeInput" autofocus style="ime-mode:disabled;">
+                        </div>
+                        <div class="form-group">
+                            <label for="barcodeInput">検証データ</label>
+                            <input type="text" class="form-control" id="validationStr" autofocus>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">検証結果</h5>
+                    <div id="validationResults">
+                        <ul class="list-group" id="resultsList">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- カメラセクション -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>カメラ読み取り</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary mb-3" id="startCameraBtn">カメラ起動</button>
+                        <button type="button" class="btn btn-danger mb-3" id="stopCameraBtn" style="display: none;">カメラ停止</button>
+                    </div>
+                    <div class="form-group position-relative">
+                        <video id="camera" class="img-fluid" style="width: 100%; height: auto; max-height: 70vh; object-fit: contain;"></video>
+                        <!-- ガイドラインオーバーレイ -->
+                        <div id="overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;">
+                            <!-- 中央の四角形 -->
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 70%; border: 2px solid #00ff00; border-radius: 10px;">
+                                <!-- 角のマーカー -->
+                                <div style="position: absolute; top: -2px; left: -2px; width: 20px; height: 20px; border-top: 4px solid #00ff00; border-left: 4px solid #00ff00;"></div>
+                                <div style="position: absolute; top: -2px; right: -2px; width: 20px; height: 20px; border-top: 4px solid #00ff00; border-right: 4px solid #00ff00;"></div>
+                                <div style="position: absolute; bottom: -2px; left: -2px; width: 20px; height: 20px; border-bottom: 4px solid #00ff00; border-left: 4px solid #00ff00;"></div>
+                                <div style="position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px; border-bottom: 4px solid #00ff00; border-right: 4px solid #00ff00;"></div>
+                            </div>
+                            <!-- 中央の十字線 -->
+                            <div style="position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(0, 255, 0, 0.5);"></div>
+                            <div style="position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(0, 255, 0, 0.5);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- zxing-js/browserライブラリの読み込み -->
+<script src="https://unpkg.com/@zxing/browser@latest"></script>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 製品データを読み込み
+    loadProducts();
+    
+    const barcodeInput = document.getElementById('barcodeInput');
+    const resultsList = document.getElementById('resultsList');
+    const generateBtn = document.getElementById('generateBtn');
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const video = document.getElementById('camera');
+    let stream = null;
+    let scanning = false;
+    let timeoutId = null;
+    const inputDelay = 500; // ミリ秒
+    let codeReader = null;  // ZXingリーダーのインスタンスを保持
+
+    // 製品データ読み込み
+    function loadProducts() {
+        fetch('/api/products_barcode')
+            .then(response => response.json())
+            .then(data => {
+                const productSelect = document.getElementById('productSelect');
+                productSelect.innerHTML = '<option value="">選択してください</option>';
+                data.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = product.display;
+                    productSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('製品データの読み込みエラー:', error);
+                alert('製品データの読み込みに失敗しました');
+            });
+    }
+
+    // バーコード生成ボタンのクリックイベント
+    generateBtn.addEventListener('click', function() {
+        const productId = document.getElementById('productSelect').value;
+        const coatingDate = document.getElementById('coatingDate').value;
+        const lotNumber = document.getElementById('lotNumber').value;
+        const barcodeType = document.getElementById('barcodeType').value;
+        const coatingType = document.getElementById('coatingType').value;
+
+        if (!productId || !lotNumber || !barcodeType) {
+            alert('製品、ロット、出荷先を入力してください');
+            return;
+        }
+
+        fetch('/api/generate_barcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                coating_date: coatingDate,
+                lot: lotNumber,
+                barcode_type: barcodeType,
+                coating_type: coatingType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('エラー: ' + data.error);
+            } else {
+                document.getElementById('validationStr').value = data.barcode;
+            }
+        })
+        .catch(error => {
+            console.error('バーコード生成エラー:', error);
+            alert('バーコード生成に失敗しました');
+        });
+    });
+
+    // QRコード/DataMatrixスキャン関数を修正
+    async function scanQRCode() {
+        if (!scanning) return;
+
+        try {
+            if (!codeReader) {
+                codeReader = new ZXing.BrowserMultiFormatReader();
+            }
+
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                ZXing.BarcodeFormat.DATA_MATRIX
+            ]);
+            // 1次元バーコードを明示的に除外
+            hints.set(ZXing.DecodeHintType.ASSUME_1D_BARCODES, false);
+            
+            await codeReader.decodeFromVideoDevice(null, video, (result, err) => {
+                if (result) {
+                    // 読み取った値をコンソールに表示
+                    console.log('読み取った生の値:', result.text);
+
+                    // バーコードが検出された場合、barcodeInputに入力
+                    const barcodeInput = document.getElementById('barcodeInput');
+                    // すべての制御文字を削除し、大文字に変換
+                    const cleanedText = result.text.replace(/[\x00-\x1F\x7F-\x9F]/g, '').toUpperCase();
+                    console.log('クリーニング後の値:', cleanedText);
+                    barcodeInput.value = cleanedText;
+                    // inputイベントを発火
+                    barcodeInput.dispatchEvent(new Event('input'));
+
+                    // カメラを停止
+                    if (codeReader) {
+                        codeReader.reset();
+                        codeReader = null;
+                    }
+                    if (video.srcObject) {
+                        video.srcObject.getTracks().forEach(track => track.stop());
+                        video.srcObject = null;
+                    }
+                    scanning = false;
+                    startCameraBtn.style.display = 'inline-block';
+                    stopCameraBtn.style.display = 'none';
+                }
+            }, hints);
+        } catch (error) {
+            console.error('バーコード読み取りエラー:', error);
+            // エラー時もカメラを停止
+            if (codeReader) {
+                codeReader.reset();
+                codeReader = null;
+            }
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            scanning = false;
+            startCameraBtn.style.display = 'inline-block';
+            stopCameraBtn.style.display = 'none';
+        }
+    }
+
+    // カメラ起動ボタンのクリックイベントを修正
+    startCameraBtn.addEventListener('click', async function() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        zoom: { ideal: 2.0 }
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                video.srcObject = stream;
+                await video.play();
+                startCameraBtn.style.display = 'none';
+                stopCameraBtn.style.display = 'inline-block';
+                // ガイドラインを表示
+                document.getElementById('overlay').style.display = 'block';
+                scanning = true;
+                codeReader = null;
+                scanQRCode();
+            } catch (error) {
+                console.error('カメラ起動エラー:', error);
+                alert('カメラの起動に失敗しました: ' + error.message);
+            }
+        } else {
+            alert('お使いのブラウザはカメラ機能をサポートしていません');
+        }
+    });
+
+    // カメラ停止ボタンのクリックイベントを修正
+    stopCameraBtn.addEventListener('click', function() {
+        if (video.srcObject) {
+            if (codeReader) {
+                codeReader.reset();
+                codeReader = null;
+            }
+            video.srcObject.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            startCameraBtn.style.display = 'inline-block';
+            stopCameraBtn.style.display = 'none';
+            // ガイドラインを非表示
+            document.getElementById('overlay').style.display = 'none';
+            scanning = false;
+        }
+    });
+
+    // 既存のバーコード検証機能
+    barcodeInput.addEventListener('input', function(e) {
+        // 既存のタイムアウトをクリア
+        if (timeoutId) {
+            window.clearTimeout(timeoutId);
+        }
+        
+        // 新しいタイムアウトを設定
+        timeoutId = window.setTimeout(() => {
+            const barcode = e.target.value.trim().toUpperCase();
+            const validationStr = document.getElementById('validationStr').value.trim().toUpperCase();
+            if (barcode) {
+                fetch('/validate_barcode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ barcode: barcode, validationStr: validationStr })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resultsList.innerHTML = '';
+                    if (data.invalid) {
+                        const li = document.createElement('li');
+                        // メッセージに「有効」が含まれる場合はプライマリー、それ以外はデンジャー
+                        if (data.message && data.message.includes('有効')) {
+                            li.className = 'list-group-item list-group-item-primary';
+                        } else {
+                            li.className = 'list-group-item list-group-item-danger';
+                        }
+                        li.textContent = `バーコード: ${barcode} - ${data.message}`;
+                        resultsList.appendChild(li);
+                    }
+                    barcodeInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsList.innerHTML = '<li class="list-group-item list-group-item-danger">エラーが発生しました</li>';
+                });
+            }
+        }, inputDelay);
+    });
+});
+</script>
+{% endblock %} 

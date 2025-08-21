@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}入庫データ編集{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>入庫データ編集</h2>
+                <a href="{{ url_for('common.cprd_dat_list') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> 一覧に戻る
+                </a>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">入庫データ編集 (ID: {{ cprd_data.CPDD_ID }})</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('common.cprd_dat_edit', cpdd_id=cprd_data.CPDD_ID) }}" id="editForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="prd_id" class="form-label">製品ID <span class="text-danger">*</span></label>
+                                    {% if prd_list %}
+                                    <select class="form-control" id="prd_id" name="prd_id" required
+                                            {{ 'disabled' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                        <option value="">選択してください</option>
+                                        {% for prd in prd_list %}
+                                        <option value="{{ prd.PRD_ID }}" 
+                                                {{ 'selected' if prd.PRD_ID == cprd_data.CPDD_PRD_ID else '' }}>
+                                            {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME or '' }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <input type="text" class="form-control" id="prd_id" name="prd_id" 
+                                           maxlength="5" required placeholder="5文字以内で入力"
+                                           value="{{ cprd_data.CPDD_PRD_ID or '' }}"
+                                           {{ 'readonly' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                    {% endif %}
+                                    <div class="form-text">製品IDを選択または入力してください</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="lot" class="form-label">LOT <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="lot" name="lot" 
+                                           min="0" max="999999" required placeholder="0-999999"
+                                           value="{{ cprd_data.CPDD_LOT or '' }}"
+                                           {{ 'readonly' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                    <div class="form-text">0から999999の範囲で入力</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sprit1" class="form-label">分割番号1</label>
+                                    <input type="number" class="form-control" id="sprit1" name="sprit1" 
+                                           min="0" max="99" placeholder="0-99（未入力時は0）"
+                                           value="{{ cprd_data.CPDD_SPRIT1 if cprd_data.CPDD_SPRIT1 != 0 else '' }}"
+                                           {{ 'readonly' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                    <div class="form-text">0から99の範囲で入力（空の場合は0が設定されます）</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sprit2" class="form-label">分割番号2</label>
+                                    <input type="number" class="form-control" id="sprit2" name="sprit2" 
+                                           min="0" max="99" placeholder="0-99（未入力時は0）"
+                                           value="{{ cprd_data.CPDD_SPRIT2 if cprd_data.CPDD_SPRIT2 != 0 else '' }}"
+                                           {{ 'readonly' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                    <div class="form-text">0から99の範囲で入力（空の場合は0が設定されます）</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="rank" class="form-label">ランク <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="rank" name="rank" required
+                                            {{ 'disabled' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                        <option value="">選択してください</option>
+                                        {% for rank in rank_list %}
+                                        <option value="{{ rank.KBN_NO }}" 
+                                                {{ 'selected' if rank.KBN_NO == cprd_data.CPDD_RANK else '' }}>
+                                            {{ rank.KBN_NO }} - {{ rank.KBN_NM }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">ランクを選択してください</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="qty" class="form-label">数量 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="qty" name="qty" 
+                                           min="0" max="99999" required placeholder="0-99999"
+                                           value="{{ cprd_data.CPDD_QTY or '' }}"
+                                           {{ 'readonly' if cprd_data.CPDD_FLG != 0 else '' }}>
+                                    <div class="form-text">0から99999の範囲で入力</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- フラグ情報表示 -->
+                        <div class="alert alert-{{ 'warning' if cprd_data.CPDD_FLG != 0 else 'info' }}">
+                            <i class="bi bi-{{ 'exclamation-triangle' if cprd_data.CPDD_FLG != 0 else 'info-circle' }}"></i> 
+                            現在のフラグ: {{ cprd_data.CPDD_FLG }}
+                            {% if cprd_data.CPDD_FLG != 0 %}
+                            <br><strong>注意：このデータはフラグが0以外のため、編集できません。</strong>
+                            {% else %}
+                            <br>フラグが0のため、編集可能です。
+                            {% endif %}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('common.cprd_dat_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> キャンセル
+                            </a>
+                            <div>
+                                {% if cprd_data.CPDD_FLG == 0 %}
+                                <button type="button" class="btn btn-outline-warning me-2" onclick="resetForm()">
+                                    <i class="bi bi-arrow-clockwise"></i> 元に戻す
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> 更新
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-secondary me-2" disabled>
+                                    <i class="bi bi-arrow-clockwise"></i> 元に戻す
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" disabled>
+                                    <i class="bi bi-check-circle"></i> 更新（編集不可）
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 現在の値を保持 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">現在の値</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2"><strong>入庫ID:</strong> {{ cprd_data.CPDD_ID }}</div>
+                        <div class="col-md-2"><strong>製品ID:</strong> {{ cprd_data.CPDD_PRD_ID or '－' }}</div>
+                        <div class="col-md-2"><strong>LOT:</strong> {{ cprd_data.CPDD_LOT or '－' }}</div>
+                        <div class="col-md-2"><strong>分割1:</strong> {{ cprd_data.CPDD_SPRIT1 or '－' }}</div>
+                        <div class="col-md-2"><strong>分割2:</strong> {{ cprd_data.CPDD_SPRIT2 or '－' }}</div>
+                        <div class="col-md-2"><strong>ランク:</strong> {{ cprd_data.CPDD_RANK or '－' }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-2"><strong>数量:</strong> {{ cprd_data.CPDD_QTY or '－' }}</div>
+                        <div class="col-md-2"><strong>フラグ:</strong> {{ cprd_data.CPDD_FLG or '－' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 元の値を保存
+const originalValues = {
+    prd_id: '{{ cprd_data.CPDD_PRD_ID or '' }}',
+    lot: '{{ cprd_data.CPDD_LOT or '' }}',
+    sprit1: '{{ cprd_data.CPDD_SPRIT1 if cprd_data.CPDD_SPRIT1 != 0 else '' }}',
+    sprit2: '{{ cprd_data.CPDD_SPRIT2 if cprd_data.CPDD_SPRIT2 != 0 else '' }}',
+    rank: '{{ cprd_data.CPDD_RANK or '' }}',
+    qty: '{{ cprd_data.CPDD_QTY or '' }}'
+};
+
+function resetForm() {
+    document.getElementById('prd_id').value = originalValues.prd_id;
+    document.getElementById('lot').value = originalValues.lot;
+    document.getElementById('sprit1').value = originalValues.sprit1;
+    document.getElementById('sprit2').value = originalValues.sprit2;
+    document.getElementById('rank').value = originalValues.rank;
+    document.getElementById('qty').value = originalValues.qty;
+}
+
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    // フラグが0以外の場合は送信不可
+    {% if cprd_data.CPDD_FLG != 0 %}
+    e.preventDefault();
+    alert('このデータはフラグが0以外のため、編集できません。');
+    return;
+    {% endif %}
+    
+    // 入力値の最終チェック
+    const prdId = document.getElementById('prd_id').value.trim();
+    const lot = parseInt(document.getElementById('lot').value);
+    const sprit1Val = document.getElementById('sprit1').value.trim();
+    const sprit2Val = document.getElementById('sprit2').value.trim();
+    const rank = document.getElementById('rank').value.trim();
+    const qty = parseInt(document.getElementById('qty').value);
+    
+    if (!prdId) {
+        alert('製品IDを入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (prdId.length > 5) {
+        alert('製品IDは5文字以内で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (isNaN(lot) || lot < 0 || lot > 999999) {
+        alert('LOTは0から999999の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    // 分割番号は空の場合もOK
+    if (sprit1Val && (isNaN(parseInt(sprit1Val)) || parseInt(sprit1Val) < 0 || parseInt(sprit1Val) > 99)) {
+        alert('分割番号1は0から99の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (sprit2Val && (isNaN(parseInt(sprit2Val)) || parseInt(sprit2Val) < 0 || parseInt(sprit2Val) > 99)) {
+        alert('分割番号2は0から99の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!rank) {
+        alert('ランクを選択してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    if (isNaN(qty) || qty < 0 || qty > 99999) {
+        alert('数量は0から99999の範囲で入力してください。');
+        e.preventDefault();
+        return;
+    }
+    
+    // 確認メッセージ
+    if (!confirm('この内容で入庫データを更新しますか？')) {
+        e.preventDefault();
+        return;
+    }
+});
+</script>
+{% endblock %} 

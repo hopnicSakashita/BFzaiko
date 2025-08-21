@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}グラデーションデータ移行実行{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>グラデーションデータ移行実行</h2>
+    
+    <div class="alert alert-warning" role="alert">
+        <h5 class="alert-heading">⚠️ 注意事項</h5>
+        <ul class="mb-0">
+            <li>この処理は既存のデータに影響を与える可能性があります</li>
+            <li>実行前にデータのバックアップを推奨します</li>
+            <li>処理中は他の操作を行わないでください</li>
+            <li>処理には時間がかかる場合があります</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">移行処理の実行</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>移行対象データ</h6>
+                    <ul>
+                        <li>GPRR_DAT → CPRD_DAT, CSHK_DAT</li>
+                        <li>GPRC_DAT（REQ_TO=1） → CPRC_DAT, CPRD_DAT</li>
+                        <li>GSHK_DAT（TO=2） → CSHK_DAT</li>
+                        <li>GPRC_DAT（REQ_TO=2） → CPRC_DAT, CPRD_DAT</li>
+                        <li>GSHK_DAT（TO=3） → CSHK_DAT</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>処理の特徴</h6>
+                    <ul>
+                        <li>全件ロールバック機能付き</li>
+                        <li>失敗レコードの詳細出力</li>
+                        <li>重複データの自動チェック</li>
+                        <li>詳細なログ出力</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="text-center">
+                <button type="button" class="btn btn-primary btn-lg" id="executeMigration">
+                    <i class="bi bi-play-fill"></i> 移行処理を実行
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 実行結果表示エリア -->
+    <div class="card mt-4" id="resultCard" style="display: none;">
+        <div class="card-header">
+            <h5 class="mb-0">実行結果</h5>
+        </div>
+        <div class="card-body">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <!-- 失敗レコード表示エリア -->
+    <div class="card mt-4" id="failedRecordsCard" style="display: none;">
+        <div class="card-header">
+            <h5 class="mb-0">失敗レコード詳細</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary float-end" id="copyFailedRecords">
+                <i class="bi bi-clipboard"></i> コピー
+            </button>
+        </div>
+        <div class="card-body">
+            <pre id="failedRecordsContent" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap;"></pre>
+        </div>
+    </div>
+
+    <!-- ログ表示エリア -->
+    <div class="card mt-4" id="logCard" style="display: none;">
+        <div class="card-header">
+            <h5 class="mb-0">実行ログ</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary float-end" id="clearLog">
+                <i class="bi bi-trash"></i> クリア
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="logContent" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; font-family: monospace; font-size: 12px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 実行確認モーダル -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">移行処理の実行確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>グラデーションデータ移行処理を実行しますか？</p>
+                <div class="alert alert-warning">
+                    <strong>注意:</strong> この処理は既存のデータに影響を与える可能性があります。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="confirmExecute">実行する</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    let isExecuting = false;
+    
+    // 実行ボタンクリック
+    $('#executeMigration').click(function() {
+        if (isExecuting) {
+            return;
+        }
+        var confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        confirmModal.show();
+    });
+    
+    // 確認モーダルで実行
+    $('#confirmExecute').click(function() {
+        var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        confirmModal.hide();
+        executeMigration();
+    });
+    
+    // ログクリア
+    $('#clearLog').click(function() {
+        $('#logContent').empty();
+        $('#logCard').hide();
+    });
+    
+    // 失敗レコードコピー
+    $('#copyFailedRecords').click(function() {
+        const failedRecordsContent = $('#failedRecordsContent').text();
+        if (failedRecordsContent) {
+            navigator.clipboard.writeText(failedRecordsContent).then(function() {
+                alert('失敗レコードの内容をクリップボードにコピーしました');
+            }).catch(function(err) {
+                console.error('コピーに失敗しました:', err);
+                alert('コピーに失敗しました');
+            });
+        }
+    });
+    
+    function executeMigration() {
+        if (isExecuting) {
+            return;
+        }
+        
+        isExecuting = true;
+        $('#executeMigration').prop('disabled', true).html('<i class="bi bi-arrow-clockwise spin"></i> 実行中...');
+        
+        // 結果表示エリアをクリア
+        $('#resultCard').hide();
+        $('#logCard').show();
+        $('#logContent').empty();
+        
+        // ログを追加
+        addLog('移行処理を開始します...', 'info');
+        
+        $.ajax({
+            url: '{{ url_for("execute_gradation_migration") }}',
+            method: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    addLog('移行処理が正常に完了しました', 'success');
+                    showResult(response);
+                } else {
+                    addLog('移行処理でエラーが発生しました: ' + response.error, 'error');
+                    showResult(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                addLog('通信エラーが発生しました: ' + error, 'error');
+                showResult({
+                    success: false,
+                    error: '通信エラーが発生しました'
+                });
+            },
+            complete: function() {
+                isExecuting = false;
+                $('#executeMigration').prop('disabled', false).html('<i class="bi bi-play-fill"></i> 移行処理を実行');
+            }
+        });
+    }
+    
+    function addLog(message, type) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logClass = type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : 'text-info';
+        const logEntry = `<div class="${logClass}">[${timestamp}] ${message}</div>`;
+        $('#logContent').append(logEntry);
+        $('#logContent').scrollTop($('#logContent')[0].scrollHeight);
+    }
+    
+    function showResult(response) {
+        let resultHtml = '';
+        
+        if (response.success) {
+            resultHtml = `
+                <div class="alert alert-success">
+                    <h6>✅ 移行処理が正常に完了しました</h6>
+                    <p><strong>成功件数:</strong> ${response.success_count}件</p>
+                    <p><strong>失敗件数:</strong> ${response.error_count}件</p>
+                </div>
+            `;
+            
+            // 失敗レコードがある場合は表示
+            if (response.failed_records_count > 0 && response.failed_records_content) {
+                $('#failedRecordsContent').text(response.failed_records_content);
+                $('#failedRecordsCard').show();
+            } else {
+                $('#failedRecordsCard').hide();
+            }
+        } else {
+            resultHtml = `
+                <div class="alert alert-danger">
+                    <h6>❌ 移行処理でエラーが発生しました</h6>
+                    <p><strong>エラー内容:</strong> ${response.error}</p>
+                </div>
+            `;
+            $('#failedRecordsCard').hide();
+        }
+        
+        $('#resultContent').html(resultHtml);
+        $('#resultCard').show();
+    }
+});
+</script>
+{% endblock %}

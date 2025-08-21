@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ノンコート在庫検索</h2>
+    
+    <!-- 検索フォーム -->
+    <form method="POST" class="mb-4">
+        {{ form.csrf_token }}
+        <div class="row g-3">
+            <div class="col-md-3">
+                {{ form.product_id.label(class="form-label") }}
+                {{ form.product_id(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.lot.label(class="form-label") }}
+                {{ form.lot(class="form-control") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.base.label(class="form-label") }}
+                {{ form.base(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.adp.label(class="form-label") }}
+                {{ form.adp(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.lr.label(class="form-label") }}
+                {{ form.lr(class="form-select") }}
+            </div>
+            <div class="col-md-3">
+                {{ form.clr.label(class="form-label") }}
+                {{ form.clr(class="form-select") }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">検索</button>
+                {% if stocks %}
+                <a href="{{ url_for('noncoat_stock_pdf', product_id=form.product_id.data, lot=form.lot.data, base=form.base.data, adp=form.adp.data, lr=form.lr.data, clr=form.clr.data) }}" 
+                   class="btn btn-success">PDF出力</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if stocks %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>製造ID</th>
+                    <th>LOT</th>
+                    <th>ベース</th>
+                    <th>加入度数</th>
+                    <th>LR</th>
+                    <th>カラー</th>
+                    <th>在庫数</th>
+                    <th>NC残</th>
+                    <th>HC残</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr>
+                    <td>{{ stock.BPDD_ID }}</td>
+                    <td>{{ stock.BPDD_LOT }}</td>
+                    <td>{{ stock.BFSP_BASE }}</td>
+                    <td>{{ stock.BFSP_ADP }}</td>
+                    <td>{{ stock.BFSP_LR }}</td>
+                    <td>{{ stock.BFSP_CLR }}</td>
+                    <td>{{ stock.stock_qty }}</td>
+                    <td>{{ stock.order_remaining }}</td>
+                    <td>{{ stock.order_remaining2 }}</td>
+                    <td>
+                        <a href="{{ url_for('create_shipping', stock_id=stock.BPDD_ID) }}" 
+                           class="btn btn-sm btn-primary">出荷</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

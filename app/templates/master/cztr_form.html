@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "取引先マスタ編集" if cztr else "取引先マスタ新規作成" }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ "bi-pencil-square" if cztr else "bi-plus-circle" }}"></i> 
+                {{ "取引先マスタ編集" if cztr else "取引先マスタ新規作成" }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 取引先マスタ情報{{ "編集" if cztr else "入力" }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('master_cztr_edit', cztr_id=cztr.CZTR_ID) if cztr else url_for('master_cztr_create') }}">
+                        <div class="row g-3">
+                            {% if not cztr %}
+                            <div class="col-md-6">
+                                <label for="cztr_id" class="form-label">
+                                    取引先ID <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="cztr_id" name="cztr_id" 
+                                       value="{{ cztr.CZTR_ID if cztr else '' }}" required>
+                                <div class="form-text">
+                                    取引先の一意のID（数値）
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="col-md-6">
+                                <label for="cztr_nm" class="form-label">
+                                    取引先名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cztr_nm" name="cztr_nm" 
+                                       value="{{ cztr.CZTR_NM if cztr else '' }}" maxlength="40" required>
+                                <div class="form-text">
+                                    取引先の名称（最大40文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cztr_kbn" class="form-label">
+                                    取引先区分 <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="cztr_kbn" name="cztr_kbn" required>
+                                    <option value="">選択してください</option>
+                                    <option value="{{ DatabaseConstants.CZTR_KBN_CUSTOMER }}" {% if cztr and cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_CUSTOMER %}selected{% endif %}>{{ DatabaseConstants.CZTR_KBN_CUSTOMER }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_CUSTOMER] }}</option>
+                                    <option value="{{ DatabaseConstants.CZTR_KBN_PROCESS_COMPANY }}" {% if cztr and cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_PROCESS_COMPANY %}selected{% endif %}>{{ DatabaseConstants.CZTR_KBN_PROCESS_COMPANY }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_PROCESS_COMPANY] }}</option>
+                                    <option value="{{ DatabaseConstants.CZTR_KBN_OTHER }}" {% if cztr and cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_OTHER %}selected{% endif %}>{{ DatabaseConstants.CZTR_KBN_OTHER }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_OTHER] }}</option>
+                                </select>
+                                <div class="form-text">
+                                    取引先の区分を選択
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="cztr_full_nm" class="form-label">正式名称</label>
+                                <input type="text" class="form-control" id="cztr_full_nm" name="cztr_full_nm" 
+                                       value="{{ cztr.CZTR_FULL_NM or '' if cztr else '' }}" maxlength="80">
+                                <div class="form-text">
+                                    取引先の正式名称（最大80文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="cztr_tanto_nm" class="form-label">担当者名</label>
+                                <input type="text" class="form-control" id="cztr_tanto_nm" name="cztr_tanto_nm" 
+                                       value="{{ cztr.CZTR_TANTO_NM or '' if cztr else '' }}" maxlength="20">
+                                <div class="form-text">
+                                    担当者の名前（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label for="cztr_typ" class="form-label">タイプ</label>
+                                <select class="form-select" id="cztr_typ" name="cztr_typ">
+                                    <option value="">選択してください</option>
+                                    <option value="{{ DatabaseConstants.CZTR_TYPE_COMMON }}" {% if cztr and cztr.CZTR_TYP == DatabaseConstants.CZTR_TYPE_COMMON %}selected{% endif %}>{{ DatabaseConstants.CZTR_TYPE_COMMON }} - {{ HtmlConstants.CZTR_TYPE_DISPLAY[DatabaseConstants.CZTR_TYPE_COMMON] }}</option>
+                                    <option value="{{ DatabaseConstants.CZTR_TYPE_BF }}" {% if cztr and cztr.CZTR_TYP == DatabaseConstants.CZTR_TYPE_BF %}selected{% endif %}>{{ DatabaseConstants.CZTR_TYPE_BF }} - {{ HtmlConstants.CZTR_TYPE_DISPLAY[DatabaseConstants.CZTR_TYPE_BF] }}</option>
+                                </select>
+                                <div class="form-text">
+                                    取引先のタイプ
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ "更新" if cztr else "登録" }}
+                            </button>
+                            <a href="{{ url_for('master_cztr_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if cztr %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>取引先名:</strong> {{ cztr.CZTR_NM }}</li>
+                                <li><strong>正式名称:</strong> {{ cztr.CZTR_FULL_NM or '-' }}</li>
+                                <li><strong>取引先区分:</strong> 
+                                    {% if cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_CUSTOMER %}
+                                        {{ DatabaseConstants.CZTR_KBN_CUSTOMER }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_CUSTOMER] }}
+                                    {% elif cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_PROCESS_COMPANY %}
+                                        {{ DatabaseConstants.CZTR_KBN_PROCESS_COMPANY }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_PROCESS_COMPANY] }}
+                                    {% elif cztr.CZTR_KBN == DatabaseConstants.CZTR_KBN_OTHER %}
+                                        {{ DatabaseConstants.CZTR_KBN_OTHER }} - {{ HtmlConstants.CZTR_KBN_DISPLAY[DatabaseConstants.CZTR_KBN_OTHER] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>詳細情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>担当者名:</strong> {{ cztr.CZTR_TANTO_NM or '-' }}</li>
+                                <li><strong>タイプ:</strong> 
+                                    {% if cztr.CZTR_TYP == DatabaseConstants.CZTR_TYPE_COMMON %}
+                                        {{ DatabaseConstants.CZTR_TYPE_COMMON }} - {{ HtmlConstants.CZTR_TYPE_DISPLAY[DatabaseConstants.CZTR_TYPE_COMMON] }}
+                                    {% elif cztr.CZTR_TYP == DatabaseConstants.CZTR_TYPE_BF %}
+                                        {{ DatabaseConstants.CZTR_TYPE_BF }} - {{ HtmlConstants.CZTR_TYPE_DISPLAY[DatabaseConstants.CZTR_TYPE_BF] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>得意先の例</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>取引先名:</strong> 株式会社サンプル</li>
+                                <li><strong>正式名称:</strong> 株式会社サンプル商事</li>
+                                <li><strong>取引先区分:</strong> 1 - 得意先</li>
+                                <li><strong>担当者名:</strong> 田中太郎</li>
+                                <li><strong>タイプ:</strong> 2 - BF一般兼用</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>加工会社の例</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>取引先名:</strong> 加工センター</li>
+                                <li><strong>正式名称:</strong> 株式会社加工センター</li>
+                                <li><strong>取引先区分:</strong> 2 - 加工会社</li>
+                                <li><strong>担当者名:</strong> 佐藤次郎</li>
+                                <li><strong>タイプ:</strong> 1 - 一般</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const cztrIdInput = document.getElementById('cztr_id');
+    const cztrNmInput = document.getElementById('cztr_nm');
+    const cztrKbnInput = document.getElementById('cztr_kbn');
+    const cztrFullNmInput = document.getElementById('cztr_full_nm');
+    const cztrTantoNmInput = document.getElementById('cztr_tanto_nm');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // 取引先IDのバリデーション（新規作成時のみ）
+        if (cztrIdInput) {
+            if (!cztrIdInput.value.trim()) {
+                showError(cztrIdInput, '取引先IDは必須です。');
+                isValid = false;
+            } else if (isNaN(cztrIdInput.value) || parseInt(cztrIdInput.value) <= 0) {
+                showError(cztrIdInput, '取引先IDは正の数値で入力してください。');
+                isValid = false;
+            } else {
+                clearError(cztrIdInput);
+            }
+        }
+        
+        // 取引先名のバリデーション
+        if (!cztrNmInput.value.trim()) {
+            showError(cztrNmInput, '取引先名は必須です。');
+            isValid = false;
+        } else if (cztrNmInput.value.length > 40) {
+            showError(cztrNmInput, '取引先名は40文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cztrNmInput);
+        }
+        
+        // 取引先区分のバリデーション
+        if (!cztrKbnInput.value) {
+            showError(cztrKbnInput, '取引先区分は必須です。');
+            isValid = false;
+        } else {
+            clearError(cztrKbnInput);
+        }
+        
+        // 正式名称のバリデーション
+        if (cztrFullNmInput.value && cztrFullNmInput.value.length > 80) {
+            showError(cztrFullNmInput, '正式名称は80文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cztrFullNmInput);
+        }
+        
+        // 担当者名のバリデーション
+        if (cztrTantoNmInput.value && cztrTantoNmInput.value.length > 20) {
+            showError(cztrTantoNmInput, '担当者名は20文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cztrTantoNmInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %} 

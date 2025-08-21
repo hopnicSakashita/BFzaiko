@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>最終出荷データ検索</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('final_shipping_search') }}">
+                <input type="hidden" name="searched" value="1">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">出荷日（開始）</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" 
+                               value="{{ search_date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">出荷日（終了）</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" 
+                               value="{{ search_date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from2" class="form-label">手配日（開始）</label>
+                        <input type="date" class="form-control" id="date_from2" name="date_from2" 
+                               value="{{ search_date_from2 }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to2" class="form-label">手配日（終了）</label>
+                        <input type="date" class="form-control" id="date_to2" name="date_to2" 
+                               value="{{ search_date_to2 }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="flg" class="form-label">処理状況</label>
+                        <select class="form-select" id="flg" name="flg">
+                            <option value="">すべて</option>
+                            <option value="0" {% if search_flg == '0' %}selected{% endif %}>未処理</option>
+                            <option value="1" {% if search_flg == '1' %}selected{% endif %}>処理済み</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">検索</button>
+                        <a href="{{ url_for('final_shipping_search') }}" class="btn btn-secondary">クリア</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if searched == '1' %}
+    <!-- 検索結果 -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>検索結果: {{ total_count }}件</h5>
+        </div>
+        <div class="card-body">
+            {% if shipping_list %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>出荷ID</th>
+                            <th>在庫ID</th>
+                            <th>依頼ID</th>
+                            <th>出荷日</th>
+                            <th>手配日</th>
+                            <th>規格</th>
+                            <th>色</th>
+                            <th>出荷数量</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in shipping_list %}
+                        <tr>
+                            <td>{{ item.GSHK_ID }}</td>
+                            <td>{{ item.GSHK_STC_ID }}</td>
+                            <td>{{ item.GSHK_REQ_ID }}</td>
+                            <td>{{ item.GSHK_DT.strftime('%Y-%m-%d') if item.GSHK_DT else '' }}</td>
+                            <td>{{ item.GSHK_ORD_DT.strftime('%Y-%m-%d') if item.GSHK_ORD_DT else '' }}</td>
+                            <td>{{ item.SPEC_NM or '' }}</td>
+                            <td>{{ item.COLOR_NM or '' }}</td>
+                            <td>{{ item.GSHK_QTY }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteShipping({{ item.GSHK_ID }})">
+                                    <i class="bi bi-trash"></i> 削除
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                検索条件に一致するデータが見つかりませんでした。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 最終出荷マトリックス表 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>出荷マトリックス表</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <h6><i class="bi bi-info-circle"></i> マトリックス表の見方</h6>
+                <p class="mb-0">
+                    <strong>縦軸：規格</strong>、<strong>横軸：色</strong>のマトリックスで最終出荷状況を表示します。<br>
+                    各セルには「出荷数量 / 出荷回数」の形式で表示されます。
+                </p>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width: 120px;">規格 / 色</th>
+                            {% for color in color_choices %}
+                                <th class="text-center" style="min-width: 100px;">{{ color[1] }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spec in spec_choices %}
+                        <tr>
+                            <td class="table-secondary fw-bold">{{ spec[1] }}</td>
+                            {% for color in color_choices %}
+                                {% set key = (spec[0]|int, color[0]|int) %}
+                                {% set data = final_shipping_data.get(key, {'total_shipped': 0, 'shipping_count': 0}) %}
+                                <td class="text-center">
+                                    {% if data.total_shipped > 0 or data.shipping_count > 0 %}
+                                        <div class="d-flex flex-column">
+                                            <span class="badge bg-primary mb-1" title="出荷数量">
+                                                {{ data.total_shipped }}
+                                            </span>
+                                            <span class="badge bg-info text-dark" title="出荷回数">
+                                                {{ data.shipping_count }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 凡例 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>凡例</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>数値の意味</h6>
+                    <ul class="list-unstyled">
+                        <li><span class="badge bg-primary me-2">数値</span> 出荷数量（最終出荷した総数量）</li>
+                        <li><span class="badge bg-info text-dark me-2">数値</span> 出荷回数（最終出荷した回数）</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>表示形式</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>「出荷数量 / 出荷回数」</strong> の形式で表示</li>
+                        <li><strong>「-」</strong> データなし</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 集計情報 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6>最終出荷集計</h6>
+        </div>
+        <div class="card-body">
+            {% set total_shipped = final_shipping_data.values() | sum(attribute='total_shipped') %}
+            {% set total_count = final_shipping_data.values() | sum(attribute='shipping_count') %}
+            <p class="mb-1">出荷数量合計: <span class="badge bg-primary">{{ total_shipped }}</span></p>
+            <p class="mb-0">出荷回数合計: <span class="badge bg-info text-dark">{{ total_count }}</span></p>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+        <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
+    </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">削除確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>この出荷データを削除してもよろしいですか？</p>
+                <div class="alert alert-warning">
+                    <strong>注意:</strong> 削除したデータは復元できません。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">削除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let deleteShippingId = null;
+
+function deleteShipping(shippingId) {
+    deleteShippingId = shippingId;
+    
+    // Bootstrap 5のModalを表示
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+function confirmDelete() {
+    if (!deleteShippingId) {
+        alert('削除対象が選択されていません');
+        return;
+    }
+    
+    // ローディング表示
+    const deleteButton = document.querySelector('#deleteModal .btn-danger');
+    const originalText = deleteButton.textContent;
+    deleteButton.textContent = '削除中...';
+    deleteButton.disabled = true;
+    
+    fetch(`/gradation/delete_gshk/${deleteShippingId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // モーダルを閉じる
+            const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+            deleteModal.hide();
+            // ページをリロードして最新の状態を表示
+            location.reload();
+        } else {
+            alert('削除に失敗しました: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('削除エラー:', error);
+        alert('削除中にエラーが発生しました: ' + error.message);
+    })
+    .finally(() => {
+        // ボタンを元に戻す
+        deleteButton.textContent = originalText;
+        deleteButton.disabled = false;
+        deleteShippingId = null;
+    });
+}
+</script>
+
+<style>
+@media print {
+    .btn, .alert {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+    .table {
+        font-size: 12px;
+    }
+    .badge {
+        border: 1px solid #000 !important;
+    }
+}
+</style>
+{% endblock %} 

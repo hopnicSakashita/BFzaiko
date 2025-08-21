@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}在庫管理システム{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    
+    <!-- カスタムCSS -->
+    <style>
+        body {
+            font-family: 'Meiryo', sans-serif;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+        }
+        
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            font-size: 1rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+        
+        .navbar .navbar-toggler {
+            top: .25rem;
+            right: 1rem;
+        }
+        
+        /* レスポンシブ対応の改善 */
+        @media (max-width: 575.98px) {
+            .navbar-brand {
+                font-size: 0.9rem;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            .navbar-nav {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            
+            .nav-link {
+                padding: 0.25rem 0.5rem;
+            }
+        }
+        
+        @media (max-width: 767.98px) {
+            .navbar {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            .navbar-brand {
+                margin-right: 0.5rem;
+            }
+        }
+        
+        /* アラートのスタイル */
+        .alert-container {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+            color: #856404;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .alert-message {
+            margin-bottom: 0;
+        }
+        
+        .alert-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        @media print {
+            .btn, .alert,
+            .navbar,         /* Bootstrapのナビバー */
+            header,          /* headerタグ */
+            .header,         /* headerクラス */
+            #mainMenu,       /* サイドメニューやナビゲーションのID */
+            .user-info,      /* ユーザー情報表示部 */
+            .nav,            /* ナビゲーション全般 */
+            .navbar-fixed-top,
+            .navbar-static-top {
+                display: none !important;
+            }
+            body {
+                margin: 0;
+            }
+        }
+    </style>
+    
+    <!-- その他のCSSとJS -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ナビゲーションバー -->
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <div class="d-flex align-items-center">
+            <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">在庫管理システム</a>
+            {% if session.get('user_id') %}
+            <div class="nav-item text-nowrap d-flex align-items-center me-2 d-md-none">
+                <span class="text-light me-2 d-none d-sm-inline">{{ session.get('user_name') }} さん</span>
+                <a class="nav-link" href="{{ url_for('auth.logout') }}" title="ログアウト">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="d-none d-sm-inline">ログアウト</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <button class="navbar-toggler d-md-none collapsed ms-auto me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        {% if session.get('user_id') %}
+        <div class="navbar-nav d-none d-md-flex ms-auto px-3">
+            <div class="nav-item text-nowrap d-flex align-items-center">
+                <span class="text-light me-3">{{ session.get('user_name') }} さん</span>
+                <a class="nav-link" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> ログアウト
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- サイドメニュー -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3 sidebar-sticky">
+                    <div class="accordion" id="mainMenu">
+                        <!-- BF -->
+                        <div class="card">
+                            <div class="card-header" id="headingBF">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBF" aria-expanded="false" aria-controls="collapseBF">
+                                        <i class="bi bi-box-seam"></i> BF
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseBF" class="collapse {% if request.endpoint in ['order_input', 'order_search', 'import_csv', 'list_bprd_mei', 'noncoat_stock_search', 'proc_order', 'hardcoat_read_excel', 'hardcoat_stock_search', 'hardcoat_auto_shipping', 'shipment_list'] %}show{% endif %}" aria-labelledby="headingBF" data-bs-parent="#mainMenu">
+                                <div class="card-body">
+                                    <ul class="nav flex-column">
+                                        <!-- BF受注データ入力 --> 
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'order_input' %}active{% endif %}" href="{{ url_for('order_input') }}">
+                                                <i class="bi bi-file-earmark-text"></i> 受注データ入力
+                                            </a>
+                                        </li>
+                                        <!-- BF受注データ検索 -->
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'order_search' %}active{% endif %}" href="{{ url_for('order_search') }}">
+                                                <i class="bi bi-file-earmark-text"></i> 受注データ検索
+                                            </a>
+                                        </li>
+                                        <!-- ノンコート -->
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'import_csv' %}active{% endif %}" href="{{ url_for('import_csv') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> NCCSV取込
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'list_bprd_mei' %}active{% endif %}" href="{{ url_for('list_bprd_mei') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> NC製造明細
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'noncoat_stock_search' %}active{% endif %}" href="{{ url_for('noncoat_stock_search') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> NC在庫検索
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'proc_order' %}active{% endif %}" href="{{ url_for('proc_order') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> 加工手配
+                                            </a>
+                                        </li>
+                                        <!-- ハードコート -->
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'hardcoat_read_excel' %}active{% endif %}" href="{{ url_for('hardcoat_read_excel') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i>指図書読込
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'hardcoat_stock_search' %}active{% endif %}" href="{{ url_for('hardcoat_stock_search') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> HC在庫検索
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'hardcoat_auto_shipping' %}active{% endif %}" href="{{ url_for('hardcoat_auto_shipping') }}">
+                                                <i class="bi bi-box-arrow-up"></i> HC自動出荷
+                                            </a>
+                                        </li>
+                                        <!-- BF出荷データ -->
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'shipment_list' %}active{% endif %}" href="{{ url_for('shipment_list') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> 出荷データ
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 一般 -->
+                        <div class="card">
+                            <div class="card-header" id="headingCommon">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCommon" aria-expanded="false" aria-controls="collapseCommon">
+                                        <i class="bi bi-gear-fill"></i> 一般
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseCommon" class="collapse {% if request.endpoint and request.endpoint.startswith('common.') or request.endpoint == 'total.processing_matrix_cprg' %}show{% endif %}" aria-labelledby="headingCommon" data-bs-parent="#mainMenu">
+                                <div class="card-body">
+                                    <ul class="nav flex-column">
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'common.csv_import_common' %}active{% endif %}" href="{{ url_for('common.csv_import_common') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> 入庫CSV取込
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'common.cprd_dat_list' %}active{% endif %}" href="{{ url_for('common.cprd_dat_list') }}">
+                                                <i class="bi bi-table"></i> 入庫データ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'common.process_request_list' %}active{% endif %}" href="{{ url_for('common.process_request_list') }}">
+                                                <i class="bi bi-table"></i> 加工依頼一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'common.shipment_list' %}active{% endif %}" href="{{ url_for('common.shipment_list') }}">
+                                                <i class="bi bi-box-arrow-up"></i> 出荷一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'common.stock_summary' %}active{% endif %}" href="{{ url_for('common.stock_summary') }}">
+                                                <i class="bi bi-box-arrow-up"></i> 在庫集計一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'total.processing_matrix_cprg' %}active{% endif %}" href="{{ url_for('total.processing_matrix_cprg') }}">
+                                                <i class="bi bi-table"></i> 加工集計マトリックス
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- バーコード -->
+                        <div class="card">
+                            <div class="card-header" id="headingBarcode">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBarcode" aria-expanded="false" aria-controls="collapseBarcode">
+                                        <i class="bi bi-upc-scan"></i> バーコード
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseBarcode" class="collapse {% if request.endpoint in ['barcode_scan', 'barcode_import', 'barcode_scan_csv'] %}show{% endif %}" aria-labelledby="headingBarcode" data-bs-parent="#mainMenu">
+                                <div class="card-body">
+                                    <ul class="nav flex-column">
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'barcode_scan' %}active{% endif %}" href="{{ url_for('barcode_scan') }}">
+                                                <i class="bi bi-camera"></i> スキャン
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'barcode_import' %}active{% endif %}" href="{{ url_for('barcode_import') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> CSV取込
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'barcode_scan_csv' %}active{% endif %}" href="{{ url_for('barcode_scan_csv') }}">
+                                                <i class="bi bi-file-earmark-arrow-up"></i> CSVスキャン
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- グラデーション -->
+                        <div class="card">
+                            <div class="card-header" id="headingGradation">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGradation" aria-expanded="false" aria-controls="collapseGradation">
+                                        <i class="bi bi-gear"></i> グラデーション
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseGradation" class="collapse {% if request.endpoint in ['gprr_list', 'gprc_list', 'gshk_list', 'nidec_gprc_list', 'processing_matrix', 'final_shipping_search', 'auto_shipping'] %}show{% endif %}" aria-labelledby="headingGradation" data-bs-parent="#mainMenu">
+                                <div class="card-body">
+                                    <ul class="nav flex-column">
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'gprr_list' %}active{% endif %}" href="{{ url_for('gprr_list') }}">
+                                                <i class="bi bi-list-ul"></i> コンベックス依頼一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'gprc_list' %}active{% endif %}" href="{{ url_for('gprc_list') }}">
+                                                <i class="bi bi-box-seam"></i> コンベックス戻り一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'gshk_list' %}active{% endif %}" href="{{ url_for('gshk_list') }}">
+                                                <i class="bi bi-list-ul"></i> ニデック依頼一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'nidec_gprc_list' %}active{% endif %}" href="{{ url_for('nidec_gprc_list') }}">
+                                                <i class="bi bi-box-seam"></i> ニデック戻り一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'processing_matrix' %}active{% endif %}" href="{{ url_for('processing_matrix') }}">
+                                                <i class="bi bi-table"></i> 加工状況表
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'final_shipping_search' %}active{% endif %}" href="{{ url_for('final_shipping_search') }}">
+                                                <i class="bi bi-search"></i> 最終出荷検索
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'auto_shipping' %}active{% endif %}" href="{{ url_for('auto_shipping') }}">
+                                                <i class="bi bi-box-arrow-up"></i> 自動出荷
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'migration_execute' %}active{% endif %}" href="{{ url_for('migration_execute') }}">
+                                                <i class="bi bi-box-arrow-up"></i> グラデーション移行
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- マスタ管理 -->
+                        <div class="card">
+                            <div class="card-header" id="headingMaster">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMaster" aria-expanded="false" aria-controls="collapseMaster">
+                                        <i class="bi bi-gear-fill"></i> マスタ管理
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapseMaster" class="collapse {% if request.endpoint in ['master_kbn_list', 'master_kbn_create', 'master_kbn_edit', 'master_cprc_list', 'master_cprc_create', 'master_cprc_edit', 'master_cztr_list', 'master_cztr_create', 'master_cztr_edit', 'master_prd_list', 'master_prd_create', 'master_prd_edit', 'master_cbcd_list', 'master_cbcd_create', 'master_cbcd_edit', 'total.cprg_list', 'total.cprg_create', 'total.cprg_edit'] %}show{% endif %}" aria-labelledby="headingMaster" data-bs-parent="#mainMenu">
+                                <div class="card-body">
+                                    <ul class="nav flex-column">
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'master_kbn_list' %}active{% endif %}" href="{{ url_for('master_kbn_list') }}">
+                                                <i class="bi bi-list-ul"></i> 区分マスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'master_cprc_list' %}active{% endif %}" href="{{ url_for('master_cprc_list') }}">
+                                                <i class="bi bi-gear"></i> 加工マスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'master_cztr_list' %}active{% endif %}" href="{{ url_for('master_cztr_list') }}">
+                                                <i class="bi bi-building"></i> 取引先マスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'master_prd_list' %}active{% endif %}" href="{{ url_for('master_prd_list') }}">
+                                                <i class="bi bi-box"></i> 製品マスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'master_cbcd_list' %}active{% endif %}" href="{{ url_for('master_cbcd_list') }}">
+                                                <i class="bi bi-upc-scan"></i> バーコードマスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'total.cprg_list' %}active{% endif %}" href="{{ url_for('total.cprg_list') }}">
+                                                <i class="bi bi-diagram-3"></i> 加工集計グループマスタ一覧
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- メインコンテンツ -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- アラートコンテナ -->
+                <div class="alert-container" id="alertContainer"></div>
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS と 依存ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+    // グローバル関数としてアラート表示機能を定義
+    window.AppAlerts = {
+        // 基本的なアラート表示関数
+        showAlert: function(title, message, type, details = null) {
+            const alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) return;
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            
+            let content = `
+                <div class="alert-title">${title}</div>
+                <div class="alert-message">${message}</div>
+            `;
+            
+            if (details && details.trim()) {
+                content += `<div class="alert-details">${details}</div>`;
+            }
+            
+            content += `<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+            
+            alertDiv.innerHTML = content;
+            alertContainer.appendChild(alertDiv);
+            
+            // スクロールして表示領域に移動
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // 10秒後に自動的に消える（エラーの場合は手動クローズのみ）
+            if (type !== 'danger') {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.classList.remove('show');
+                        setTimeout(() => {
+                            if (alertDiv.parentNode) {
+                                alertContainer.removeChild(alertDiv);
+                            }
+                        }, 150);
+                    }
+                }, 10000);
+            }
+        },
+        
+        // エラーメッセージを表示する関数
+        showError: function(message, details = null) {
+            this.showAlert('エラー', message, 'danger', details);
+        },
+        
+        // 成功メッセージを表示する関数
+        showSuccess: function(message, details = null) {
+            this.showAlert('成功', message, 'success', details);
+        },
+        
+        // 警告メッセージを表示する関数
+        showWarning: function(message, details = null) {
+            this.showAlert('警告', message, 'warning', details);
+        },
+        
+        // 情報メッセージを表示する関数
+        showInfo: function(message, details = null) {
+            this.showAlert('情報', message, 'info', details);
+        },
+        
+        // すべてのアラートを消去
+        clearAll: function() {
+            const alertContainer = document.getElementById('alertContainer');
+            if (alertContainer) {
+                alertContainer.innerHTML = '';
+            }
+        }
+    };
+    
+    // 2重登録防止機能
+    window.ButtonControl = {
+        // ボタンを無効化してローディング状態にする
+        disable: function(buttonElement, loadingText = '処理中...') {
+            if (!buttonElement) return;
+            
+            // 元のテキストを保存
+            buttonElement.dataset.originalText = buttonElement.textContent;
+            buttonElement.dataset.originalDisabled = buttonElement.disabled;
+            
+            // ボタンを無効化してテキストを変更
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                ${loadingText}
+            `;
+            
+            // CSSクラスを追加
+            buttonElement.classList.add('btn-loading');
+        },
+        
+        // ボタンの無効化を解除する
+        enable: function(buttonElement) {
+            if (!buttonElement) return;
+            
+            // 元の状態に戻す
+            buttonElement.disabled = buttonElement.dataset.originalDisabled === 'true';
+            buttonElement.textContent = buttonElement.dataset.originalText;
+            
+            // CSSクラスを削除
+            buttonElement.classList.remove('btn-loading');
+            
+            // データ属性をクリア
+            delete buttonElement.dataset.originalText;
+            delete buttonElement.dataset.originalDisabled;
+        },
+        
+        // フォーム送信時に自動的にボタンを無効化
+        setupFormSubmitProtection: function(formSelector, buttonSelector, loadingText = '送信中...') {
+            const form = document.querySelector(formSelector);
+            const button = document.querySelector(buttonSelector);
+            
+            if (form && button) {
+                form.addEventListener('submit', () => {
+                    this.disable(button, loadingText);
+                });
+            }
+        },
+        
+        // Ajax送信時の汎用プロテクション
+        protectAjaxSubmit: function(buttonElement, ajaxFunction, loadingText = '送信中...') {
+            if (!buttonElement || !ajaxFunction) return;
+            
+            const originalHandler = buttonElement.onclick;
+            
+            buttonElement.onclick = (e) => {
+                e.preventDefault();
+                
+                // 既に無効化されている場合は何もしない
+                if (buttonElement.disabled) return;
+                
+                // ボタン無効化
+                this.disable(buttonElement, loadingText);
+                
+                // Ajax関数を実行
+                const result = ajaxFunction();
+                
+                // Promiseの場合は完了後にボタンを有効化
+                if (result && typeof result.then === 'function') {
+                    result.finally(() => {
+                        this.enable(buttonElement);
+                    });
+                } else {
+                    // 通常の関数の場合は少し待ってから有効化
+                    setTimeout(() => {
+                        this.enable(buttonElement);
+                    }, 1000);
+                }
+            };
+        }
+    };
+    
+    // ボタンローディング用CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+    `;
+         document.head.appendChild(style);
+    
+    // 下位互換性のための関数エイリアス
+    function showAlert(message, type) { AppAlerts.showAlert('通知', message, type); }
+    function showError(message, details) { AppAlerts.showError(message, details); }
+    function showSuccess(message, details) { AppAlerts.showSuccess(message, details); }
+    function showWarning(message, details) { AppAlerts.showWarning(message, details); }
+    function showInfo(message, details) { AppAlerts.showInfo(message, details); }
+    
+    // alert関数をオーバーライドして画面上表示に変更
+    window.alert = function(message) {
+        AppAlerts.showInfo(message);
+    };
+    
+    // confirm関数の代替（Bootstrapモーダルを使用）
+    window.showConfirm = function(message, callback) {
+        if (confirm(message)) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    };
+    
+    // ページ読み込み時にフラッシュメッセージを表示
+    document.addEventListener('DOMContentLoaded', function() {
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                // HTMLエスケープされたメッセージをデコード
+                var decodedMessage = '{{ message|e|replace('\n', '\\n')|replace('\r', '\\r') }}';
+                decodedMessage = decodedMessage.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                
+                {% if category == 'error' %}
+                    AppAlerts.showError(decodedMessage);
+                {% elif category == 'success' %}
+                    AppAlerts.showSuccess(decodedMessage);
+                {% elif category == 'warning' %}
+                    AppAlerts.showWarning(decodedMessage);
+                {% elif category == 'info' %}
+                    AppAlerts.showInfo(decodedMessage);
+                {% else %}
+                    AppAlerts.showInfo(decodedMessage);
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+    });
+    </script>
+
+    <!-- 追加のJavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

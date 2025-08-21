@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}在庫詳細{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>在庫詳細</h2>
+                <a href="{{ url_for('common.stock_summary') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> 一覧に戻る
+                </a>
+            </div>
+            
+            <!-- 検索条件表示 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">検索条件</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>製品ID:</strong> {{ prd_id }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>製品名:</strong> {{ product_name or '－' }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>ランク:</strong> {{ rank_name or rank or '－' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 在庫詳細一覧 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">在庫詳細一覧（在庫残数 > 0）</h5>
+                </div>
+                <div class="card-body">
+                    {% if stock_detail_list %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>入庫ID</th>
+                                    <th>製品ID</th>
+                                    <th>製品名</th>
+                                    <th>LOT</th>
+                                    <th>分割番号1</th>
+                                    <th>分割番号2</th>
+                                    <th>ランク</th>
+                                    <th>入庫数量</th>
+                                    <th>在庫残数</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in stock_detail_list %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ stock.CPDD_ID }}</strong>
+                                    </td>
+                                    <td>{{ stock.CPDD_PRD_ID or '' }}</td>
+                                    <td>{{ stock.PRD_DSP_NM or '－' }}</td>
+                                    <td>{{ stock.CPDD_LOT or '' }}</td>
+                                    <td>{{ stock.CPDD_SPRIT1 or '' }}</td>
+                                    <td>{{ stock.CPDD_SPRIT2 or '' }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ stock.RANK_NAME or stock.CPDD_RANK or '－' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ stock.CPDD_QTY or 0 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ stock.ZAIKO_ZAN or 0 }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('common.cprd_dat_shipment_create', cpdd_id=stock.CPDD_ID) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="bi bi-box-arrow-up"></i> 出庫
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 集計サマリー -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">集計サマリー</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong>総件数:</strong> 
+                                            <span class="badge bg-info">{{ stock_detail_list|length }}</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>総入庫数量:</strong> 
+                                            <span class="badge bg-primary">
+                                                {{ stock_detail_list|sum(attribute='CPDD_QTY') }}
+                                            </span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>総在庫残数:</strong> 
+                                            <span class="badge bg-success">
+                                                {{ stock_detail_list|sum(attribute='ZAIKO_ZAN') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 指定された条件の在庫データが見つかりませんでした。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

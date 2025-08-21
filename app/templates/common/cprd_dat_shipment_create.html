@@ -1,0 +1,822 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>出荷データ作成</h2>
+    
+    <!-- 入庫データの表示 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>入庫データ情報</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>入庫ID:</strong> {{ cprd_data.CPDD_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>製品ID:</strong> {{ cprd_data.CPDD_PRD_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>製品名:</strong> {{ cprd_data.PRD_DSP_NM or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>LOT:</strong> {{ cprd_data.CPDD_LOT or '-' }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>ランク:</strong> {{ cprd_data.RANK_NAME or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>入庫数量:</strong> {{ cprd_data.CPDD_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>在庫残数:</strong> <span id="zaikoZan">{{ cprd_data.ZAIKO_ZAN }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 出荷データ入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>出荷データ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>出荷区分</th>
+                                <th>出荷日</th>
+                                <th>手配日</th>
+                                <th>出荷数量</th>
+                                <th id="inputToHeader" style="display: none;">出荷先</th>
+                                <th id="inputPrcIdHeader" style="display: none;">加工</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括登録</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 出荷データ一覧 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>出荷データ一覧</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                                    <table class="table table-striped" id="shipmentTable">
+                        <thead>
+                            <tr id="shipmentTableHeader">
+                                <th>ID</th>
+                                <th>出荷区分</th>
+                                <th>出荷日</th>
+                                <th>出荷数量</th>
+                                <th id="shipmentToHeader" style="display: none;">出荷先</th>
+                                <th id="shipmentPrcIdHeader" style="display: none;">加工</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shipmentTableBody">
+                            <!-- JavaScriptで動的に生成 -->
+                        </tbody>
+                    </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('common.cprd_dat_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">出荷データ編集</h5>
+                <button type="button" class="close" data-bs-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="edit_cshk_id">
+                    <div class="form-group">
+                        <label for="edit_kbn">出荷区分</label>
+                        <select class="form-control" id="edit_kbn" name="kbn" required onchange="onEditKbnChange()">
+                            <option value="">選択してください</option>
+                            <option value="{{ DatabaseConstants.CSHK_KBN_SHIPMENT }}">{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_SHIPMENT] }}</option>
+                            <option value="{{ DatabaseConstants.CSHK_KBN_PROCESS }}">{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_PROCESS] }}</option>
+                            <option value="{{ DatabaseConstants.CSHK_KBN_LOSS }}">{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_LOSS] }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_dt">出荷日</label>
+                        <input type="date" class="form-control" id="edit_dt" name="dt" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ord_dt">手配日</label>
+                        <input type="date" class="form-control" id="edit_ord_dt" name="ord_dt" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_qty">出荷数量</label>
+                        <input type="number" class="form-control" id="edit_qty" name="qty" required min="1">
+                    </div>
+                    <div class="form-group" id="edit_to_group" style="display: none;">
+                        <label for="edit_to">出荷先</label>
+                        <select class="form-control" id="edit_to" name="to">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="edit_prc_id_group" style="display: none;">
+                        <label for="edit_prc_id">加工</label>
+                        <select class="form-control" id="edit_prc_id" name="prc_id">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="updateShipment()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 定数をJavaScriptで使用できるようにする
+const CSHK_KBN_SHIPMENT = {{ DatabaseConstants.CSHK_KBN_SHIPMENT }};
+const CSHK_KBN_PROCESS = {{ DatabaseConstants.CSHK_KBN_PROCESS }};
+const CSHK_KBN_LOSS = {{ DatabaseConstants.CSHK_KBN_LOSS }};
+
+// 表示用ラベル定数
+const CSHK_KBN_LABELS = {
+    [CSHK_KBN_SHIPMENT]: '{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_SHIPMENT] }}',
+    [CSHK_KBN_PROCESS]: '{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_PROCESS] }}',
+    [CSHK_KBN_LOSS]: '{{ HtmlConstants.CSHK_KBN_DISPLAY[DatabaseConstants.CSHK_KBN_LOSS] }}'
+};
+
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    loadShipmentList();
+    loadCustomerList();
+    loadCprcList();
+    addRow(); // 初期行を追加
+    updateColumnVisibility(); // 列の表示・非表示を初期化
+    
+    // 編集モーダルが閉じられた時の処理
+    const editModalElement = document.getElementById('editModal');
+    editModalElement.addEventListener('hidden.bs.modal', function () {
+        document.getElementById('editForm').reset();
+        resetEditFields();
+    });
+});
+
+// グローバル変数
+let customerList = [];
+let cprcList = [];
+const maxZaikoZan = {{ cprd_data.ZAIKO_ZAN }};
+
+// 得意先リストを取得
+function loadCustomerList() {
+    fetch('/common/api/get_customer_list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                customerList = data.data;
+            } else {
+                console.error('得意先リストの取得に失敗:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading customer list:', error);
+        });
+}
+
+// 加工リストを取得
+function loadCprcList() {
+    fetch('/common/api/get_cprc_list/{{ cprd_data.CPDD_PRD_ID }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                cprcList = data.data;
+            } else {
+                console.error('加工リストの取得に失敗:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading cprc list:', error);
+        });
+}
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    
+    const toHeaderDisplay = document.getElementById('inputToHeader').style.display;
+    const prcIdHeaderDisplay = document.getElementById('inputPrcIdHeader').style.display;
+    
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td>
+            <select class="form-control kbn-input" required onchange="onKbnChange(this)">
+                <option value="">選択</option>
+                <option value="${CSHK_KBN_SHIPMENT}">${CSHK_KBN_LABELS[CSHK_KBN_SHIPMENT]}</option>
+                <option value="${CSHK_KBN_PROCESS}">${CSHK_KBN_LABELS[CSHK_KBN_PROCESS]}</option>
+                <option value="${CSHK_KBN_LOSS}">${CSHK_KBN_LABELS[CSHK_KBN_LOSS]}</option>
+            </select>
+        </td>
+        <td><input type="date" class="form-control dt-input" required></td>
+        <td><input type="date" class="form-control ord-dt-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" max="${maxZaikoZan}" required></td>
+        <td class="to-cell" style="display: ${toHeaderDisplay};">
+            <select class="form-control to-input" style="display: none;">
+                <option value="">選択</option>
+            </select>
+        </td>
+        <td class="prc-id-cell" style="display: ${prcIdHeaderDisplay};">
+            <select class="form-control prc-id-input" style="display: none;">
+                <option value="">選択</option>
+            </select>
+        </td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+    
+    // 今日の日付を設定
+    const today = new Date().toISOString().split('T')[0];
+    const lastRow = tbody.lastElementChild;
+    lastRow.querySelector('.dt-input').value = today;
+    lastRow.querySelector('.ord-dt-input').value = today;
+}
+
+// 出荷区分変更時の処理
+function onKbnChange(select) {
+    const row = select.closest('tr');
+    const kbn = select.value;
+    const toSelect = row.querySelector('.to-input');
+    const prcIdSelect = row.querySelector('.prc-id-input');
+    
+    // フィールドをリセット
+    toSelect.style.display = 'none';
+    prcIdSelect.style.display = 'none';
+    toSelect.value = '';
+    prcIdSelect.value = '';
+    
+    if (kbn === CSHK_KBN_SHIPMENT.toString()) {  // 出荷
+        toSelect.style.display = 'block';
+        populateCustomerSelect(toSelect);
+    } else if (kbn === CSHK_KBN_PROCESS.toString()) {  // 加工
+        prcIdSelect.style.display = 'block';
+        populateCprcSelect(prcIdSelect);
+    }
+    
+    // 列の表示・非表示を更新
+    updateColumnVisibility();
+}
+
+// 列の表示・非表示を制御
+function updateColumnVisibility() {
+    const tbody = document.getElementById('inputTableBody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    let needToColumn = false;
+    let needPrcIdColumn = false;
+    
+    // 全ての行をチェックして、必要な列を判定
+    rows.forEach(row => {
+        const kbnSelect = row.querySelector('.kbn-input');
+        if (kbnSelect && kbnSelect.value === CSHK_KBN_SHIPMENT.toString()) {  // 出荷
+            needToColumn = true;
+        }
+        if (kbnSelect && kbnSelect.value === CSHK_KBN_PROCESS.toString()) {  // 加工
+            needPrcIdColumn = true;
+        }
+    });
+    
+    // ヘッダーの表示・非表示
+    const toHeader = document.getElementById('inputToHeader');
+    const prcIdHeader = document.getElementById('inputPrcIdHeader');
+    
+    toHeader.style.display = needToColumn ? 'table-cell' : 'none';
+    prcIdHeader.style.display = needPrcIdColumn ? 'table-cell' : 'none';
+    
+    // 各行のセルの表示・非表示
+    rows.forEach(row => {
+        const toCell = row.querySelector('.to-cell');
+        const prcIdCell = row.querySelector('.prc-id-cell');
+        
+        if (toCell) {
+            toCell.style.display = needToColumn ? 'table-cell' : 'none';
+        }
+        if (prcIdCell) {
+            prcIdCell.style.display = needPrcIdColumn ? 'table-cell' : 'none';
+        }
+    });
+}
+
+// 得意先セレクトボックスに選択肢を設定
+function populateCustomerSelect(select) {
+    select.innerHTML = '<option value="">選択</option>';
+    customerList.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.CZTR_ID;
+        option.textContent = `${customer.CZTR_ID} - ${customer.CZTR_NM}`;
+        select.appendChild(option);
+    });
+}
+
+// 加工セレクトボックスに選択肢を設定
+function populateCprcSelect(select) {
+    select.innerHTML = '<option value="">選択</option>';
+    cprcList.forEach(cprc => {
+        const option = document.createElement('option');
+        option.value = cprc.CPRC_ID;
+        option.textContent = `${cprc.CPRC_ID} - ${cprc.CPRC_NM}`;
+        select.appendChild(option);
+    });
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+        updateColumnVisibility();
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+    updateColumnVisibility();
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    let totalQty = 0;
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const kbn = row.querySelector('.kbn-input').value;
+        const dt = row.querySelector('.dt-input').value;
+        const ordDt = row.querySelector('.ord-dt-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        const to = row.querySelector('.to-input').value;
+        const prcId = row.querySelector('.prc-id-input').value;
+        
+        // 必須項目チェック
+        if (!kbn || !dt || !ordDt || !qty) {
+            alert(`${i + 1}行目: 必須項目を入力してください`);
+            return;
+        }
+        
+        // 出荷区分別の必須チェック
+        if (kbn === CSHK_KBN_SHIPMENT.toString() && !to) {
+            alert(`${i + 1}行目: 出荷先を選択してください`);
+            return;
+        }
+        if (kbn === CSHK_KBN_PROCESS.toString() && !prcId) {
+            alert(`${i + 1}行目: 加工を選択してください`);
+            return;
+        }
+        
+        // 数値の妥当性チェック
+        if (parseInt(qty) <= 0 || parseInt(qty) > maxZaikoZan) {
+            alert(`${i + 1}行目: 出荷数量は1から${maxZaikoZan}の範囲で入力してください`);
+            return;
+        }
+        
+        totalQty += parseInt(qty);
+        
+        formData.push({
+            kbn: kbn,
+            dt: dt,
+            ord_dt: ordDt,
+            qty: qty,
+            to: to || null,
+            prc_id: prcId || null
+        });
+    }
+    
+    // 在庫残数量との比較チェック
+    if (totalQty > maxZaikoZan) {
+        alert(`出荷数量の合計(${totalQty})が在庫残数量(${maxZaikoZan})を超えています`);
+        return;
+    }
+    
+    // 一括登録
+    batchCreateShipment(formData);
+});
+
+// 一括登録処理
+function batchCreateShipment(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '登録中...';
+    submitBtn.disabled = true;
+    
+    // 各データを順次登録
+    let successCount = 0;
+    let errorCount = 0;
+    let errorDetails = [];
+    
+    const promises = formData.map((data, index) => {
+        const requestData = {
+            cpdd_id: {{ cprd_data.CPDD_ID }},
+            cshk_kbn: parseInt(data.kbn),
+            qty: parseInt(data.qty),
+            cshk_dt: data.dt,
+            cshk_ord_dt: data.ord_dt
+        };
+        
+        if (data.to) {
+            requestData.cshk_to = parseInt(data.to);
+        }
+        if (data.prc_id) {
+            requestData.cshk_prc_id = parseInt(data.prc_id);
+        }
+        
+        return fetch('/common/cprd_dat/shipment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                errorDetails.push(`行${index + 1}: ${errorMsg}`);
+                console.error(`行${index + 1}の登録エラー:`, result.error);
+            }
+        })
+        .catch(error => {
+            errorCount++;
+            const errorMsg = error.toString();
+            errorDetails.push(`行${index + 1}: 通信エラー - ${errorMsg}`);
+            console.error(`行${index + 1}の登録エラー:`, error);
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        if (errorCount === 0) {
+            alert(`${successCount}件のデータを登録しました`);
+            clearForm();
+        } else {
+            // エラー詳細を含むメッセージを作成
+            let errorMessage = `${successCount}件登録成功、${errorCount}件登録失敗しました\n\nエラー詳細:\n`;
+            errorDetails.forEach(detail => {
+                errorMessage += `・${detail}\n`;
+            });
+            alert(errorMessage);
+        }
+        loadShipmentList();
+        updateZaikoZan();
+        
+        // ボタンを元に戻す
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// 出荷データ一覧を取得
+function loadShipmentList() {
+    console.log('loadShipmentList開始');
+    fetch(`/common/api/get_shipment_list/{{ cprd_data.CPDD_ID }}`)
+        .then(response => {
+            console.log('loadShipmentList response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('loadShipmentList response data:', data);
+            if (data.success) {
+                console.log('出荷データ件数:', data.data.length);
+                displayShipmentList(data.data);
+            } else {
+                console.error('出荷データの取得に失敗:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('loadShipmentList Error:', error);
+        });
+}
+
+// 出荷データ一覧を表示
+function displayShipmentList(shipmentList) {
+    const tbody = document.getElementById('shipmentTableBody');
+    const toHeader = document.getElementById('shipmentToHeader');
+    const prcIdHeader = document.getElementById('shipmentPrcIdHeader');
+    
+    tbody.innerHTML = '';
+    
+    if (shipmentList.length === 0) {
+        // データがない場合は列を非表示にしてメッセージ表示
+        toHeader.style.display = 'none';
+        prcIdHeader.style.display = 'none';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">データがありません</td></tr>';
+        return;
+    }
+    
+    // データがある場合、出荷先または加工のデータがあるかチェック
+    let hasToData = false;
+    let hasPrcIdData = false;
+    
+    shipmentList.forEach(shipment => {
+        if (shipment.CZTR_NM && shipment.CZTR_NM.trim() !== '') {
+            hasToData = true;
+        }
+        if (shipment.CPRC_NM && shipment.CPRC_NM.trim() !== '') {
+            hasPrcIdData = true;
+        }
+    });
+    
+    // ヘッダーの表示・非表示を切り替え
+    toHeader.style.display = hasToData ? 'table-cell' : 'none';
+    prcIdHeader.style.display = hasPrcIdData ? 'table-cell' : 'none';
+    
+    const kbnLabels = CSHK_KBN_LABELS;
+    
+    shipmentList.forEach(shipment => {
+        const kbnText = kbnLabels[shipment.CSHK_KBN] || shipment.CSHK_KBN;
+        
+        const row = document.createElement('tr');
+        
+        let rowHtml = `
+            <td>${shipment.CSHK_ID}</td>
+            <td>${kbnText}</td>
+            <td>${shipment.CSHK_DT}</td>
+            <td>${shipment.CSHK_QTY}</td>
+        `;
+        
+        // 出荷先列を条件付きで追加
+        if (hasToData) {
+            rowHtml += `<td>${shipment.CZTR_NM || '-'}</td>`;
+        }
+        
+        // 加工列を条件付きで追加
+        if (hasPrcIdData) {
+            rowHtml += `<td>${shipment.CPRC_NM || '-'}</td>`;
+        }
+        
+        rowHtml += `
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editShipment(${shipment.CSHK_ID})">編集</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteShipment(${shipment.CSHK_ID})">削除</button>
+            </td>
+        `;
+        
+        row.innerHTML = rowHtml;
+        tbody.appendChild(row);
+    });
+}
+
+// 在庫残数を更新
+function updateZaikoZan() {
+    fetch(`/common/api/get_zaiko_zan/{{ cprd_data.CPDD_ID }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('zaikoZan').textContent = data.zaiko_zan;
+            }
+        })
+        .catch(error => {
+            console.error('Error updating zaiko zan:', error);
+        });
+}
+
+// 編集モーダルの処理
+function onEditKbnChange() {
+    const kbn = document.getElementById('edit_kbn').value;
+    resetEditFields();
+    
+    if (kbn === CSHK_KBN_SHIPMENT.toString()) {  // 出荷
+        document.getElementById('edit_to_group').style.display = 'block';
+        populateEditCustomerSelect();
+    } else if (kbn === CSHK_KBN_PROCESS.toString()) {  // 加工
+        document.getElementById('edit_prc_id_group').style.display = 'block';
+        populateEditCprcSelect();
+    }
+}
+
+function resetEditFields() {
+    document.getElementById('edit_to_group').style.display = 'none';
+    document.getElementById('edit_prc_id_group').style.display = 'none';
+    document.getElementById('edit_to').value = '';
+    document.getElementById('edit_prc_id').value = '';
+}
+
+function populateEditCustomerSelect() {
+    const select = document.getElementById('edit_to');
+    select.innerHTML = '<option value="">選択してください</option>';
+    customerList.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.CZTR_ID;
+        option.textContent = `${customer.CZTR_ID} - ${customer.CZTR_NM}`;
+        select.appendChild(option);
+    });
+}
+
+function populateEditCprcSelect() {
+    const select = document.getElementById('edit_prc_id');
+    select.innerHTML = '<option value="">選択してください</option>';
+    cprcList.forEach(cprc => {
+        const option = document.createElement('option');
+        option.value = cprc.CPRC_ID;
+        option.textContent = `${cprc.CPRC_ID} - ${cprc.CPRC_NM}`;
+        select.appendChild(option);
+    });
+}
+
+// 編集機能
+function editShipment(cshkId) {
+    // 出荷データを取得してモーダルに表示
+    fetch(`/common/api/get_shipment_list/{{ cprd_data.CPDD_ID }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const shipment = data.data.find(s => s.CSHK_ID == cshkId);
+                if (shipment) {
+                    console.log('編集対象の出荷データ:', shipment);
+                    // モーダルにデータを設定
+                    document.getElementById('edit_cshk_id').value = shipment.CSHK_ID;
+                    document.getElementById('edit_kbn').value = shipment.CSHK_KBN;
+                    document.getElementById('edit_dt').value = shipment.CSHK_DT;
+                    document.getElementById('edit_ord_dt').value = shipment.CSHK_ORD_DT || shipment.CSHK_DT;
+                    document.getElementById('edit_qty').value = shipment.CSHK_QTY;
+                    console.log('モーダルに設定したCSHK_ID:', shipment.CSHK_ID);
+                    
+                    // 出荷区分に応じてフィールドを表示
+                    onEditKbnChange();
+                    
+                    // 出荷先または加工IDを設定
+                    if (shipment.CSHK_KBN == CSHK_KBN_SHIPMENT && shipment.CSHK_TO) {
+                        document.getElementById('edit_to').value = shipment.CSHK_TO;
+                    } else if (shipment.CSHK_KBN == CSHK_KBN_PROCESS && shipment.CSHK_PRC_ID) {
+                        document.getElementById('edit_prc_id').value = shipment.CSHK_PRC_ID;
+                    }
+                    
+                    // モーダルを表示
+                    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                    editModal.show();
+                } else {
+                    alert('出荷データが見つかりません');
+                }
+            } else {
+                alert('出荷データの取得に失敗しました');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('データの取得中にエラーが発生しました');
+        });
+}
+
+function updateShipment() {
+    const cshkId = document.getElementById('edit_cshk_id').value;
+    const kbn = document.getElementById('edit_kbn').value;
+    const dt = document.getElementById('edit_dt').value;
+    const ordDt = document.getElementById('edit_ord_dt').value;
+    const qty = document.getElementById('edit_qty').value;
+    const to = document.getElementById('edit_to').value;
+    const prcId = document.getElementById('edit_prc_id').value;
+    
+    // バリデーション
+    if (!cshkId) {
+        alert('出荷IDが設定されていません');
+        return;
+    }
+    
+    if (!kbn || !dt || !ordDt || !qty) {
+        alert('必須項目を入力してください');
+        return;
+    }
+    
+    if (kbn === CSHK_KBN_SHIPMENT.toString() && !to) {
+        alert('出荷先を選択してください');
+        return;
+    }
+    
+    if (kbn === CSHK_KBN_PROCESS.toString() && !prcId) {
+        alert('加工を選択してください');
+        return;
+    }
+    
+    const requestData = {
+        cshk_id: parseInt(cshkId),
+        cshk_kbn: parseInt(kbn),
+        qty: parseInt(qty),
+        cshk_dt: dt,
+        cshk_ord_dt: ordDt
+    };
+    
+    if (to) {
+        requestData.cshk_to = parseInt(to);
+    }
+    if (prcId) {
+        requestData.cshk_prc_id = parseInt(prcId);
+    }
+    
+    console.log('更新リクエストデータ:', requestData);
+    
+    fetch('/common/cprd_dat/shipment/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        console.log('更新レスポンス状態:', response.status, response.statusText);
+        return response.json();
+    })
+    .then(result => {
+        console.log('更新レスポンス内容:', result);
+        if (result.success) {
+            alert('出荷データを更新しました');
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+            editModal.hide();
+            loadShipmentList();
+            updateZaikoZan();
+        } else {
+            console.error('更新エラー詳細:', result.error);
+            alert('エラー: ' + (result.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('更新処理中の例外:', error);
+        alert('更新中にエラーが発生しました: ' + error.message);
+    });
+}
+
+function deleteShipment(cshkId) {
+    if (confirm('このデータを削除してもよろしいですか？')) {
+        fetch('/common/cprd_dat/shipment/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({cshk_id: parseInt(cshkId)})
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('出荷データを削除しました');
+                loadShipmentList();
+                updateZaikoZan();
+            } else {
+                alert('削除に失敗しました: ' + (result.error || '不明なエラー'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+</script>
+{% endblock %} 

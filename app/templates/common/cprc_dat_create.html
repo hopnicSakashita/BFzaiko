@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>加工戻りデータ作成</h2>
+    
+    <!-- 出荷データの表示 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>出荷データ情報</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>出荷ID:</strong> {{ cshk_data.CSHK_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>製品ID:</strong> {{ cshk_data.CSHK_PRD_ID }}
+                </div>
+                <div class="col-md-3">
+                    <strong>製品名:</strong> {{ cshk_data.PRD_DSP_NM or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>LOT:</strong> {{ cshk_data.CPDD_LOT or '-' }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <strong>ランク:</strong> {{ cshk_data.RANK_NAME or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>出荷数量:</strong> {{ cshk_data.CSHK_QTY }}
+                </div>
+                <div class="col-md-3">
+                    <strong>戻っていない残数:</strong> 
+                    <span class="badge {{ 'bg-success' if prc_zan_qty == 0 else 'bg-warning' if prc_zan_qty > 0 else 'bg-danger' }}">
+                        {{ prc_zan_qty }}
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <strong>出荷日:</strong> {{ cshk_data.CSHK_DT }}
+                </div>
+                <div class="col-md-3">
+                    <strong>加工名:</strong> {{ cshk_data.CPRC_NM or '-' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加工戻りデータ入力フォーム -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>加工戻りデータ入力</h5>
+            <div>
+                <button type="button" class="btn btn-success" onclick="addRow()">行追加</button>
+                <button type="button" class="btn btn-danger" onclick="removeRow()">行削除</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="createForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="inputTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>戻り日</th>
+                                <th>戻り数</th>
+                                <th>戻り不良数</th>
+                                <th>検品不良数</th>
+                                <th>合格数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inputTableBody">
+                            <!-- 動的に行が追加される -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">一括登録</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 加工戻りデータ一覧 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>加工戻りデータ一覧</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="cprcTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>戻り日</th>
+                            <th>戻り数</th>
+                            <th>戻り不良数</th>
+                            <th>検品不良数</th>
+                            <th>合格数</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cprcTableBody">
+                        <!-- JavaScriptで動的に生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('common.process_request_list') }}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">加工戻りデータ編集</h5>
+                <button type="button" class="close" data-bs-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="edit_cprc_id">
+                    <div class="form-group">
+                        <label for="edit_date">戻り日</label>
+                        <input type="date" class="form-control" id="edit_date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_qty">戻り数</label>
+                        <input type="number" class="form-control" id="edit_qty" name="qty" required min="1" max="99999" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ret_ng_qty">戻り不良数</label>
+                        <input type="number" class="form-control" id="edit_ret_ng_qty" name="ret_ng_qty" min="0" max="99999" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_ins_ng_qty">検品不良数</label>
+                        <input type="number" class="form-control" id="edit_ins_ng_qty" name="ins_ng_qty" min="0" max="99999" onchange="calculateEditPassQty()">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_pass_qty">合格数</label>
+                        <input type="number" class="form-control" id="edit_pass_qty" name="pass_qty" min="0" max="99999" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="updateCprcData()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    loadCprcDataList();
+    addRow(); // 初期行を追加
+    
+    // 編集モーダルが閉じられた時の処理
+    const editModalElement = document.getElementById('editModal');
+    editModalElement.addEventListener('hidden.bs.modal', function () {
+        document.getElementById('editForm').reset();
+    });
+});
+
+// グローバル変数
+const maxShkQty = {{ cshk_data.CSHK_QTY }};
+
+// 行を追加
+function addRow() {
+    const tbody = document.getElementById('inputTableBody');
+    const rowCount = tbody.children.length;
+    const newRow = document.createElement('tr');
+    
+    newRow.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td><input type="date" class="form-control date-input" required></td>
+        <td><input type="number" class="form-control qty-input" min="1" max="99999" required onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control ret-ng-qty-input" min="0" max="99999" value="0" onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control ins-ng-qty-input" min="0" max="99999" value="0" onchange="calculatePassQty(this)"></td>
+        <td><input type="number" class="form-control pass-qty-input" min="0" max="99999" value="0" readonly></td>
+    `;
+    tbody.appendChild(newRow);
+    updateRowNumbers();
+    
+    // 今日の日付を設定
+    const today = new Date().toISOString().split('T')[0];
+    const lastRow = tbody.lastElementChild;
+    lastRow.querySelector('.date-input').value = today;
+}
+
+// 行を削除
+function removeRow() {
+    const tbody = document.getElementById('inputTableBody');
+    if (tbody.children.length > 1) {
+        tbody.removeChild(tbody.lastChild);
+        updateRowNumbers();
+    }
+}
+
+// 行番号を更新
+function updateRowNumbers() {
+    const rows = document.getElementById('inputTableBody').children;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+// 合格数を自動計算
+function calculatePassQty(inputElement) {
+    const row = inputElement.closest('tr');
+    const qtyInput = row.querySelector('.qty-input');
+    const retNgQtyInput = row.querySelector('.ret-ng-qty-input');
+    const insNgQtyInput = row.querySelector('.ins-ng-qty-input');
+    const passQtyInput = row.querySelector('.pass-qty-input');
+    
+    const qty = parseInt(qtyInput.value) || 0;
+    const retNgQty = parseInt(retNgQtyInput.value) || 0;
+    const insNgQty = parseInt(insNgQtyInput.value) || 0;
+    
+    // 合格数 = 戻り数 - 戻り不良数 - 検品不良数
+    const passQty = Math.max(0, qty - retNgQty - insNgQty);
+    passQtyInput.value = passQty;
+}
+
+// 編集モーダル用の合格数を自動計算
+function calculateEditPassQty() {
+    const qty = parseInt(document.getElementById('edit_qty').value) || 0;
+    const retNgQty = parseInt(document.getElementById('edit_ret_ng_qty').value) || 0;
+    const insNgQty = parseInt(document.getElementById('edit_ins_ng_qty').value) || 0;
+    
+    // 合格数 = 戻り数 - 戻り不良数 - 検品不良数
+    const passQty = Math.max(0, qty - retNgQty - insNgQty);
+    document.getElementById('edit_pass_qty').value = passQty;
+}
+
+// フォームをクリア
+function clearForm() {
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    addRow();
+}
+
+// フォーム送信処理
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const rows = document.getElementById('inputTableBody').children;
+    const formData = [];
+    
+    // 各行のデータを収集
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const date = row.querySelector('.date-input').value;
+        const qty = row.querySelector('.qty-input').value;
+        const retNgQty = row.querySelector('.ret-ng-qty-input').value;
+        const insNgQty = row.querySelector('.ins-ng-qty-input').value;
+        const passQty = row.querySelector('.pass-qty-input').value;
+        
+        // 必須項目チェック
+        if (!date || !qty) {
+            alert(`${i + 1}行目: 戻り日と戻り数は必須です`);
+            return;
+        }
+        
+        // 数値の妥当性チェック
+        if (parseInt(qty) <= 0 || parseInt(qty) > 99999) {
+            alert(`${i + 1}行目: 戻り数は1から99999の範囲で入力してください`);
+            return;
+        }
+        
+        formData.push({
+            date: date,
+            qty: qty,
+            ret_ng_qty: retNgQty || 0,
+            ins_ng_qty: insNgQty || 0,
+            pass_qty: passQty || 0
+        });
+    }
+    
+    // 一括登録
+    batchCreateCprcData(formData);
+});
+
+// 一括登録処理
+function batchCreateCprcData(formData) {
+    const submitBtn = document.querySelector('#createForm button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '登録中...';
+    submitBtn.disabled = true;
+    
+    // 各データを順次登録
+    let successCount = 0;
+    let errorCount = 0;
+    let errorDetails = [];
+    
+    const promises = formData.map((data, index) => {
+        const requestData = {
+            shk_id: {{ cshk_data.CSHK_ID }},
+            date: data.date,
+            qty: parseInt(data.qty),
+            ret_ng_qty: parseInt(data.ret_ng_qty),
+            ins_ng_qty: parseInt(data.ins_ng_qty),
+            pass_qty: parseInt(data.pass_qty)
+        };
+        
+        return fetch('/common/cprc_dat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errorMsg = result.error || '不明なエラーが発生しました';
+                errorDetails.push(`行${index + 1}: ${errorMsg}`);
+                console.error(`行${index + 1}の登録エラー:`, result.error);
+            }
+        })
+        .catch(error => {
+            errorCount++;
+            const errorMsg = error.toString();
+            errorDetails.push(`行${index + 1}: 通信エラー - ${errorMsg}`);
+            console.error(`行${index + 1}の登録エラー:`, error);
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        if (errorCount === 0) {
+            alert(`${successCount}件の加工戻りデータを登録しました`);
+            clearForm();
+        } else {
+            // エラー詳細を含むメッセージを作成
+            let errorMessage = `${successCount}件登録成功、${errorCount}件登録失敗しました\n\nエラー詳細:\n`;
+            errorDetails.forEach(detail => {
+                errorMessage += `・${detail}\n`;
+            });
+            alert(errorMessage);
+        }
+        loadCprcDataList();
+        
+        // ボタンを元に戻す
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// 加工戻りデータ一覧を取得
+function loadCprcDataList() {
+    fetch(`/common/api/get_cprc_dat_list/{{ cshk_data.CSHK_ID }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCprcDataList(data.data);
+            } else {
+                console.error('加工戻りデータの取得に失敗:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading cprc data list:', error);
+        });
+}
+
+// 加工戻りデータ一覧を表示
+function displayCprcDataList(cprcDataList) {
+    const tbody = document.getElementById('cprcTableBody');
+    tbody.innerHTML = '';
+    
+    if (cprcDataList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">データがありません</td></tr>';
+        return;
+    }
+    
+    cprcDataList.forEach(cprcData => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${cprcData.CPCD_ID}</td>
+            <td>${cprcData.CPCD_DATE}</td>
+            <td>${cprcData.CPCD_QTY}</td>
+            <td>${cprcData.CPCD_RET_NG_QTY}</td>
+            <td>${cprcData.CPCD_INS_NG_QTY}</td>
+            <td>${cprcData.CPCD_PASS_QTY}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editCprcData(${cprcData.CPCD_ID})">編集</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCprcData(${cprcData.CPCD_ID})">削除</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// 編集機能
+function editCprcData(cprcId) {
+    fetch(`/common/api/get_cprc_dat_list/{{ cshk_data.CSHK_ID }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const cprcData = data.data.find(c => c.CPCD_ID == cprcId);
+                if (cprcData) {
+                    // モーダルにデータを設定
+                    document.getElementById('edit_cprc_id').value = cprcData.CPCD_ID;
+                    document.getElementById('edit_date').value = cprcData.CPCD_DATE;
+                    document.getElementById('edit_qty').value = cprcData.CPCD_QTY;
+                    document.getElementById('edit_ret_ng_qty').value = cprcData.CPCD_RET_NG_QTY;
+                    document.getElementById('edit_ins_ng_qty').value = cprcData.CPCD_INS_NG_QTY;
+                    document.getElementById('edit_pass_qty').value = cprcData.CPCD_PASS_QTY;
+                    
+                    // モーダルを表示
+                    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                    editModal.show();
+                } else {
+                    alert('加工戻りデータが見つかりません');
+                }
+            } else {
+                alert('加工戻りデータの取得に失敗しました');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('データの取得中にエラーが発生しました');
+        });
+}
+
+function updateCprcData() {
+    const cprcId = document.getElementById('edit_cprc_id').value;
+    const date = document.getElementById('edit_date').value;
+    const qty = document.getElementById('edit_qty').value;
+    const retNgQty = document.getElementById('edit_ret_ng_qty').value;
+    const insNgQty = document.getElementById('edit_ins_ng_qty').value;
+    const passQty = document.getElementById('edit_pass_qty').value;
+    
+    // バリデーション
+    if (!cprcId || !date || !qty) {
+        alert('必須項目を入力してください');
+        return;
+    }
+    
+    const requestData = {
+        cprc_id: parseInt(cprcId),
+        date: date,
+        qty: parseInt(qty),
+        ret_ng_qty: parseInt(retNgQty) || 0,
+        ins_ng_qty: parseInt(insNgQty) || 0,
+        pass_qty: parseInt(passQty) || 0
+    };
+    
+    fetch('/common/cprc_dat/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('加工戻りデータを更新しました');
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+            editModal.hide();
+            loadCprcDataList();
+        } else {
+            alert('エラー: ' + (result.error || '更新に失敗しました'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新中にエラーが発生しました');
+    });
+}
+
+function deleteCprcData(cprcId) {
+    if (confirm('このデータを削除してもよろしいですか？')) {
+        fetch('/common/cprc_dat/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({cprc_id: parseInt(cprcId)})
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('加工戻りデータを削除しました');
+                loadCprcDataList();
+            } else {
+                alert('削除に失敗しました: ' + (result.error || '不明なエラー'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('削除中にエラーが発生しました');
+        });
+    }
+}
+</script>
+{% endblock %} 
