@@ -5,7 +5,7 @@ from app.import_csv import import_csv_nonecoat, import_from_barcode
 from app.import_excel import import_excel_hardcoat
 from app.models import BfspMst, PrdDat, log_error, BfspMstModel, BrcpDat, BprdMei, BprdMeiModel, PrdDatModel, BBcdDat
 from app.database import get_db_session
-from sqlalchemy import text
+from sqlalchemy import text, cast, Integer
 from datetime import datetime
 from app.forms import NoncoatStockSearchForm, ShipmentSearchForm, ProcOrderSearchForm, HardcoatStockForm, BrcpSearchForm
 from app.shipment import Shipment
@@ -1031,7 +1031,8 @@ def barcode_scan_csv():
         if bbcd_kbn:
             query = query.filter(BBcdDat.BBCD_KBN == bbcd_kbn)
         
-        bcd_data = query.order_by(BBcdDat.BBCD_ID).all()
+        # BBCD_IDを数値としてソート
+        bcd_data = query.order_by(cast(BBcdDat.BBCD_ID, Integer)).all()
         session.close()
         
         # バーコード区分の選択肢を取得
