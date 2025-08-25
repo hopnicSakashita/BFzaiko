@@ -6,7 +6,8 @@ from app.gradation import Gradation
 from app.auth import login_required
 from sqlalchemy import text
 from datetime import datetime
-from app.models_total import CprgMstModel
+from app.models_total import CprgMstModel, CttlMstModel
+from app.models_master import PrdMstModel
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 
 total_bp = Blueprint('total', __name__, url_prefix='/total')
@@ -42,6 +43,228 @@ def processing_matrix_cprg():
         log_error(f"加工集計マトリックス表示エラー: {str(e)}")
         flash('データの取得中にエラーが発生しました。', 'error')
         return redirect(url_for('index'))
+
+@total_bp.route('/stock_matrix_cttl')
+@login_required
+def stock_matrix_cttl():
+    """在庫集計マトリックス表を表示"""
+    try:
+        # 検索条件を取得
+        cttl_id = request.args.get('cttl_id', '').strip()
+        searched = request.args.get('searched', '').strip()
+        
+        # 在庫集計グループ一覧を取得
+        cttl_groups = CttlMstModel.get_cttl_groups()
+        
+        matrix_data = {}
+        cttl_details = []
+        
+        # 検索ボタンが押された場合のみデータを取得
+        if searched == '1' and cttl_id:
+            matrix_data = CttlMstModel.get_stock_matrix_data(cttl_id)
+            cttl_details = CttlMstModel.get_cttl_details(cttl_id)
+        
+        return render_template('total/stock_matrix_cttl.html', 
+                             cttl_groups=cttl_groups,
+                             matrix_data=matrix_data,
+                             cttl_details=cttl_details,
+                             search_cttl_id=cttl_id,
+                             searched=searched)
+        
+    except Exception as e:
+        log_error(f"在庫集計マトリックス表示エラー: {str(e)}")
+        flash('データの取得中にエラーが発生しました。', 'error')
+        return redirect(url_for('index'))
+
+# 以下、CttlMstModelのマスター管理ルートを追加
+
+@total_bp.route('/cttl/list')
+@login_required
+def cttl_list():
+    """在庫集計マスタ一覧画面を表示"""
+    try:
+        # 検索条件を取得
+        cttl_id = request.args.get('cttl_id', '').strip()
+        
+        # 在庫集計グループIDの選択肢を取得
+        cttl_id_choices = CttlMstModel.get_group_choices()
+        
+        # データを取得
+        if cttl_id:
+            # 特定のグループIDで絞り込み
+            cttl_list = [item for item in CttlMstModel.get_all() if item['CTTL_ID'] == cttl_id]
+        else:
+            cttl_list = CttlMstModel.get_all()
+        
+        return render_template('master/cttl_list.html', 
+                             cttl_list=cttl_list, 
+                             cttl_id_choices=cttl_id_choices,
+                             search_cttl_id=cttl_id)
+    except Exception as e:
+        flash(f'在庫集計マスタ一覧の表示中にエラーが発生しました: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@total_bp.route('/cttl/create', methods=['GET', 'POST'])
+@login_required
+def cttl_create():
+    """在庫集計マスタ新規作成画面"""
+    if request.method == 'POST':
+        try:
+            # フォームデータを取得
+            cttl_id = request.form.get('cttl_id', '').strip()
+            cttl_prd_id = request.form.get('cttl_prd_id', '').strip()
+            cttl_g_nm = request.form.get('cttl_g_nm', '').strip()
+            cttl_col_nm = request.form.get('cttl_col_nm', '').strip()
+            cttl_row_nm = request.form.get('cttl_row_nm', '').strip()
+            cttl_col_key = request.form.get('cttl_col_key', '').strip()
+            cttl_row_key = request.form.get('cttl_row_key', '').strip()
+            
+            # バリデーション
+            if not cttl_id:
+                flash('グループIDは必須です。', 'error')
+                return render_template('master/cttl_form.html', 
+                                     title='在庫集計マスタ新規作成',
+                                     icon='bi-plus-circle',
+                                     form_type='新規作成',
+                                     form_action=url_for('total.cttl_create'),
+                                     submit_text='登録',
+                                     is_edit=False,
+                                     product_choices=PrdMstModel.get_product_choices())
+            
+            if not cttl_prd_id:
+                flash('製品IDは必須です。', 'error')
+                return render_template('master/cttl_form.html', 
+                                     title='在庫集計マスタ新規作成',
+                                     icon='bi-plus-circle',
+                                     form_type='新規作成',
+                                     form_action=url_for('total.cttl_create'),
+                                     submit_text='登録',
+                                     is_edit=False,
+                                     product_choices=PrdMstModel.get_product_choices())
+            
+            if not cttl_g_nm:
+                flash('グループ名は必須です。', 'error')
+                return render_template('master/cttl_form.html', 
+                                     title='在庫集計マスタ新規作成',
+                                     icon='bi-plus-circle',
+                                     form_type='新規作成',
+                                     form_action=url_for('total.cttl_create'),
+                                     submit_text='登録',
+                                     is_edit=False,
+                                     product_choices=PrdMstModel.get_product_choices())
+            
+            # 数値変換
+            try:
+                cttl_col_key = int(cttl_col_key) if cttl_col_key else None
+                cttl_row_key = int(cttl_row_key) if cttl_row_key else None
+            except ValueError:
+                flash('列キー、行キーは数値で入力してください。', 'error')
+                return render_template('master/cttl_form.html', 
+                                     title='在庫集計マスタ新規作成',
+                                     icon='bi-plus-circle',
+                                     form_type='新規作成',
+                                     form_action=url_for('total.cttl_create'),
+                                     submit_text='登録',
+                                     is_edit=False,
+                                     product_choices=PrdMstModel.get_product_choices())
+            
+            # データを作成
+            CttlMstModel.create(cttl_id, cttl_prd_id, cttl_g_nm, cttl_col_nm, cttl_row_nm, cttl_col_key, cttl_row_key)
+            
+            flash('在庫集計マスタを登録しました。', 'success')
+            return redirect(url_for('total.cttl_list'))
+            
+        except Exception as e:
+            flash(f'在庫集計マスタの登録中にエラーが発生しました: {str(e)}', 'error')
+            return render_template('master/cttl_form.html', 
+                                 title='在庫集計マスタ新規作成',
+                                 icon='bi-plus-circle',
+                                 form_type='新規作成',
+                                 form_action=url_for('total.cttl_create'),
+                                 submit_text='登録',
+                                 is_edit=False,
+                                 product_choices=PrdMstModel.get_product_choices())
+    
+    # GET処理
+    return render_template('master/cttl_form.html', 
+                         title='在庫集計マスタ新規作成',
+                         icon='bi-plus-circle',
+                         form_type='新規作成',
+                         form_action=url_for('total.cttl_create'),
+                         submit_text='登録',
+                         is_edit=False,
+                         product_choices=PrdMstModel.get_product_choices())
+
+@total_bp.route('/cttl/<cttl_id>/<cttl_prd_id>/edit', methods=['GET', 'POST'])
+@login_required
+def cttl_edit(cttl_id, cttl_prd_id):
+    """在庫集計マスタ編集画面"""
+    try:
+        if request.method == 'POST':
+            # フォームデータを取得
+            cttl_g_nm = request.form.get('cttl_g_nm', '').strip()
+            cttl_col_nm = request.form.get('cttl_col_nm', '').strip()
+            cttl_row_nm = request.form.get('cttl_row_nm', '').strip()
+            cttl_col_key = request.form.get('cttl_col_key', '').strip()
+            cttl_row_key = request.form.get('cttl_row_key', '').strip()
+            
+            # バリデーション
+            if not cttl_g_nm:
+                flash('グループ名は必須です。', 'error')
+                return redirect(url_for('total.cttl_edit', cttl_id=cttl_id, cttl_prd_id=cttl_prd_id))
+            
+            # 数値変換
+            try:
+                cttl_col_key = int(cttl_col_key) if cttl_col_key else None
+                cttl_row_key = int(cttl_row_key) if cttl_row_key else None
+            except ValueError:
+                flash('列キー、行キーは数値で入力してください。', 'error')
+                return redirect(url_for('total.cttl_edit', cttl_id=cttl_id, cttl_prd_id=cttl_prd_id))
+            
+            # データを更新
+            cttl_data = {
+                'cttl_g_nm': cttl_g_nm,
+                'cttl_col_nm': cttl_col_nm,
+                'cttl_row_nm': cttl_row_nm,
+                'cttl_col_key': cttl_col_key,
+                'cttl_row_key': cttl_row_key
+            }
+            
+            CttlMstModel.update(cttl_id, cttl_prd_id, cttl_data)
+            flash('在庫集計マスタを更新しました。', 'success')
+            return redirect(url_for('total.cttl_list'))
+        
+        # GET処理
+        cttl_data = CttlMstModel.get_by_id(cttl_id, cttl_prd_id)
+        if not cttl_data:
+            flash('指定された在庫集計マスタが見つかりません。', 'error')
+            return redirect(url_for('total.cttl_list'))
+        
+        return render_template('master/cttl_form.html', 
+                             title='在庫集計マスタ編集',
+                             icon='bi-pencil-square',
+                             form_type='編集',
+                             form_action=url_for('total.cttl_edit', cttl_id=cttl_id, cttl_prd_id=cttl_prd_id),
+                             submit_text='更新',
+                             is_edit=True,
+                             cttl=cttl_data,
+                             product_choices=PrdMstModel.get_product_choices())
+        
+    except Exception as e:
+        flash(f'在庫集計マスタの編集中にエラーが発生しました: {str(e)}', 'error')
+        return redirect(url_for('total.cttl_list'))
+
+@total_bp.route('/cttl/<cttl_id>/<cttl_prd_id>/delete', methods=['POST'])
+@login_required
+def cttl_delete(cttl_id, cttl_prd_id):
+    """在庫集計マスタ削除処理"""
+    try:
+        CttlMstModel.delete(cttl_id, cttl_prd_id)
+        flash('在庫集計マスタを削除しました。', 'success')
+        return redirect(url_for('total.cttl_list'))
+    except Exception as e:
+        flash(f'在庫集計マスタの削除中にエラーが発生しました: {str(e)}', 'error')
+        return redirect(url_for('total.cttl_list'))
 
 # 以下、CprgMstModelのマスター管理ルートを追加
 

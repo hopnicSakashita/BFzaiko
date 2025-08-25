@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - 在庫管理システム{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi {{ icon }}"></i> {{ title }}
+            </h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> 在庫集計マスタ情報{{ form_type }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ form_action }}">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="cttl_id" class="form-label">
+                                    グループID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cttl_id" name="cttl_id" 
+                                       value="{{ cttl.CTTL_ID if cttl else '' }}" maxlength="5" required
+                                       {% if is_edit %}readonly{% endif %}>
+                                <div class="form-text">
+                                    在庫集計グループのID（最大5文字）{% if is_edit %}（変更不可）{% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_g_nm" class="form-label">
+                                    グループ名 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cttl_g_nm" name="cttl_g_nm" 
+                                       value="{{ cttl.CTTL_G_NM if cttl else '' }}" maxlength="20" required>
+                                <div class="form-text">
+                                    在庫集計グループの名称（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_prd_id" class="form-label">
+                                    製品ID <span class="text-danger">*</span>
+                                </label>
+                                {% if is_edit %}
+                                <input type="text" class="form-control" id="cttl_prd_id" name="cttl_prd_id" 
+                                       value="{{ cttl.CTTL_PRD_ID }}" readonly>
+                                <div class="form-text">
+                                    製品ID（変更不可）
+                                </div>
+                                {% else %}
+                                <select class="form-select" id="cttl_prd_id" name="cttl_prd_id" required>
+                                    <option value="">選択してください</option>
+                                    {% for value, label in product_choices %}
+                                    {% if value != '' %}
+                                    <option value="{{ value }}" {% if cttl and cttl.CTTL_PRD_ID == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    関連する製品ID
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_col_nm" class="form-label">列名</label>
+                                <input type="text" class="form-control" id="cttl_col_nm" name="cttl_col_nm" 
+                                       value="{{ cttl.CTTL_COL_NM or '' if cttl else '' }}" maxlength="20">
+                                <div class="form-text">
+                                    マトリックスの列名（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_row_nm" class="form-label">行名</label>
+                                <input type="text" class="form-control" id="cttl_row_nm" name="cttl_row_nm" 
+                                       value="{{ cttl.CTTL_ROW_NM or '' if cttl else '' }}" maxlength="20">
+                                <div class="form-text">
+                                    マトリックスの行名（最大20文字）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_col_key" class="form-label">列キー</label>
+                                <input type="number" class="form-control" id="cttl_col_key" name="cttl_col_key" 
+                                       value="{{ cttl.CTTL_COL_KEY if cttl else '' }}" min="0" max="99">
+                                <div class="form-text">
+                                    マトリックスの列キー（0-99）
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="cttl_row_key" class="form-label">行キー</label>
+                                <input type="number" class="form-control" id="cttl_row_key" name="cttl_row_key" 
+                                       value="{{ cttl.CTTL_ROW_KEY if cttl else '' }}" min="0" max="99">
+                                <div class="form-text">
+                                    マトリックスの行キー（0-99）
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ submit_text }}
+                            </button>
+                            <a href="{{ url_for('total.cttl_list') }}" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left"></i> 一覧に戻る
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if is_edit and cttl %}
+            <!-- 現在の情報 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 現在の情報
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> {{ cttl.CTTL_ID }}</li>
+                                <li><strong>グループ名:</strong> {{ cttl.CTTL_G_NM }}</li>
+                                <li><strong>製品ID:</strong> {{ cttl.CTTL_PRD_ID }}</li>
+                                <li><strong>製品名:</strong> {{ cttl.PRD_NAME or '-' }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>マトリックス情報</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>列名:</strong> {{ cttl.CTTL_COL_NM or '-' }}</li>
+                                <li><strong>行名:</strong> {{ cttl.CTTL_ROW_NM or '-' }}</li>
+                                <li><strong>列キー:</strong> {{ cttl.CTTL_COL_KEY or '-' }}</li>
+                                <li><strong>行キー:</strong> {{ cttl.CTTL_ROW_KEY or '-' }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if not is_edit %}
+            <!-- 入力例 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> 入力例
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>サイズ別在庫集計グループ</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> SZ001</li>
+                                <li><strong>グループ名:</strong> サイズ別在庫集計</li>
+                                <li><strong>製品ID:</strong> PRD01（ノンコート製品）</li>
+                                <li><strong>列名:</strong> サイズ</li>
+                                <li><strong>行名:</strong> 色</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>カラー別在庫集計グループ</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>グループID:</strong> CL001</li>
+                                <li><strong>グループ名:</strong> カラー別在庫集計</li>
+                                <li><strong>製品ID:</strong> PRD02（ハードコート製品）</li>
+                                <li><strong>列名:</strong> 仕様</li>
+                                <li><strong>行名:</strong> カラー</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// フォームバリデーション
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const cttlIdInput = document.getElementById('cttl_id');
+    const cttlGNmInput = document.getElementById('cttl_g_nm');
+    const cttlPrdIdInput = document.getElementById('cttl_prd_id');
+    const cttlColKeyInput = document.getElementById('cttl_col_key');
+    const cttlRowKeyInput = document.getElementById('cttl_row_key');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // グループIDのバリデーション
+        if (!cttlIdInput.value.trim()) {
+            showError(cttlIdInput, 'グループIDは必須です。');
+            isValid = false;
+        } else if (cttlIdInput.value.length > 5) {
+            showError(cttlIdInput, 'グループIDは5文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cttlIdInput);
+        }
+        
+        // グループ名のバリデーション
+        if (!cttlGNmInput.value.trim()) {
+            showError(cttlGNmInput, 'グループ名は必須です。');
+            isValid = false;
+        } else if (cttlGNmInput.value.length > 20) {
+            showError(cttlGNmInput, 'グループ名は20文字以内で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cttlGNmInput);
+        }
+        
+        // 製品IDのバリデーション
+        if (!cttlPrdIdInput.value) {
+            showError(cttlPrdIdInput, '製品IDは必須です。');
+            isValid = false;
+        } else {
+            clearError(cttlPrdIdInput);
+        }
+        
+        // 列キーのバリデーション
+        if (cttlColKeyInput.value && (isNaN(cttlColKeyInput.value) || cttlColKeyInput.value < 0 || cttlColKeyInput.value > 99)) {
+            showError(cttlColKeyInput, '列キーは0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cttlColKeyInput);
+        }
+        
+        // 行キーのバリデーション
+        if (cttlRowKeyInput.value && (isNaN(cttlRowKeyInput.value) || cttlRowKeyInput.value < 0 || cttlRowKeyInput.value > 99)) {
+            showError(cttlRowKeyInput, '行キーは0-99の数値で入力してください。');
+            isValid = false;
+        } else {
+            clearError(cttlRowKeyInput);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function showError(input, message) {
+        input.classList.add('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearError(input) {
+        input.classList.remove('is-invalid');
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %}

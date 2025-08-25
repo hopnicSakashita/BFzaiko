@@ -469,6 +469,26 @@ class PrdMstModel(Base):
             raise Exception(error_msg)
         finally:
             session.close()
+    
+    @staticmethod
+    def get_product_choices():
+        """製品IDの選択肢を取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT DISTINCT PRD_ID, PRD_DSP_NM
+                FROM PRD_MST
+                WHERE PRD_FLG = :prd_flg_active
+                ORDER BY PRD_ID
+            """)
+            
+            results = session.execute(sql, {'prd_flg_active': DatabaseConstants.FLG_ACTIVE}).fetchall()
+            return [('', '選択してください')] + [(row.PRD_ID, f"{row.PRD_ID} - {row.PRD_DSP_NM or row.PRD_NAME or ''}") for row in results]
+        except Exception as e:
+            logging.error(f"製品選択肢取得中にエラーが発生しました: {str(e)}")
+            raise
+        finally:
+            session.close()
 
 class CbcdMstModel(Base):
     """バーコードマスタテーブルのSQLAlchemyモデル"""

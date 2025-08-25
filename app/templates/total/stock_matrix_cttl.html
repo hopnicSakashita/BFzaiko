@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>在庫集計マトリックス</h2>
+    
+    <!-- 検索フォーム -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>検索条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('total.stock_matrix_cttl') }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="cttl_id">在庫集計グループ</label>
+                            <select class="form-control" id="cttl_id" name="cttl_id" required>
+                                <option value="">選択してください</option>
+                                {% for group in cttl_groups %}
+                                    <option value="{{ group.CTTL_ID }}" {% if search_cttl_id == group.CTTL_ID %}selected{% endif %}>
+                                        {{ group.CTTL_ID }} - {{ group.CTTL_G_NM or '未設定' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary" name="searched" value="1">検索</button>
+                        <a href="{{ url_for('total.stock_matrix_cttl') }}" class="btn btn-secondary">クリア</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 検索結果表示 -->
+    {% if searched == '1' and cttl_details %}
+        <!-- マトリックス表 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>在庫集計マトリックス表</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="min-width: 120px;">行名 / 列名</th>
+                                {% set unique_col_keys = cttl_details | map(attribute='CTTL_COL_KEY') | unique | list | sort %}
+                                {% for col_key in unique_col_keys %}
+                                    {% set col_detail = cttl_details | selectattr('CTTL_COL_KEY', 'equalto', col_key) | first %}
+                                    <th class="text-center" style="min-width: 150px;">
+                                        {{ col_detail.CTTL_COL_NM or '未設定' }}
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set unique_row_keys = cttl_details | map(attribute='CTTL_ROW_KEY') | unique | list | sort %}
+                            {% for row_key in unique_row_keys %}
+                                {% set row_detail = cttl_details | selectattr('CTTL_ROW_KEY', 'equalto', row_key) | first %}
+                                <tr>
+                                    <td class="table-secondary fw-bold">
+                                        {{ row_detail.CTTL_ROW_NM or '未設定' }}
+                                    </td>
+                                    {% for col_key in unique_col_keys %}
+                                        {% set key = (col_key, row_key) %}
+                                        {% set data = matrix_data.get(key, {'zaiko': 0}) %}
+                                        <td class="text-center">
+                                            {% if data.zaiko > 0 %}
+                                                <span class="badge bg-primary" title="在庫数">
+                                                    {{ data.zaiko }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 凡例 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>凡例</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>数値の意味</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-primary me-2">数値</span> 在庫数</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>表示形式</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>「在庫数」</strong> の形式で表示</li>
+                            <li><strong>「-」</strong> データなし</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elif searched == '1' %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> 指定された条件に一致するデータが見つかりませんでした。
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">トップに戻る</a>
+        {% if searched == '1' and cttl_details %}
+            <button type="button" class="btn btn-primary" onclick="window.print()">印刷</button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .alert {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+    .table {
+        font-size: 12px;
+    }
+    .badge {
+        border: 1px solid #000 !important;
+    }
+}
+</style>
+{% endblock %}

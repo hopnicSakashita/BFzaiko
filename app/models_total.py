@@ -178,10 +178,7 @@ class CprgMstModel(Base):
                     'CPRG_ROW_NM': r.CPRG_ROW_NM,
                     'CPRG_AF_PRD_ID': r.CPRG_AF_PRD_ID,
                     'CPRG_COL_KEY': r.CPRG_COL_KEY,
-                    'CPRG_ROW_KEY': r.CPRG_ROW_KEY,
-                    'PRD_NAME': r.PRD_NAME,
-                    'PRC_NAME': r.PRC_NAME,
-                    'AF_PRD_NAME': r.AF_PRD_NAME
+                    'CPRG_ROW_KEY': r.CPRG_ROW_KEY
                 }
                 result.append(cprg_data)
             return result
@@ -398,6 +395,307 @@ class CprgMstModel(Base):
             return [('', '選択してください')] + [(row.CPRC_ID, f"{row.CPRC_ID} - {row.CPRC_NM}") for row in results]
         except Exception as e:
             log_error(f"製品別加工選択肢取得中にエラーが発生しました: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+
+class CttlMstModel(Base):
+    """在庫集計マスタテーブルのSQLAlchemyモデル"""
+    __tablename__ = 'CTTL_MST'
+    
+    CTTL_ID = Column(Numeric(5, 0), primary_key=True)  # グループID
+    CTTL_PRD_ID = Column(String(5), primary_key=True)  # 製品ID
+    CTTL_G_NM = Column(String(20))  # グループ名
+    CTTL_COL_NM = Column(String(20))  # 列名
+    CTTL_ROW_NM = Column(String(20))  # 行名
+    CTTL_COL_KEY = Column(Numeric(2, 0))  # 列キー
+    CTTL_ROW_KEY = Column(Numeric(2, 0))  # 行キー
+    
+    @staticmethod
+    def get_cttl_groups():
+        """在庫集計グループ一覧を取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT DISTINCT CTTL_ID, CTTL_G_NM
+                FROM CTTL_MST
+                ORDER BY CTTL_ID
+            """)
+            
+            results = session.execute(sql).fetchall()
+            
+            result = []
+            for r in results:
+                group = {
+                    'CTTL_ID': r.CTTL_ID,
+                    'CTTL_G_NM': r.CTTL_G_NM or '未設定'
+                }
+                result.append(group)
+            return result
+            
+        except Exception as e:
+            log_error(f"在庫集計グループ一覧の取得中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def get_cttl_details(cttl_id):
+        """指定されたグループIDの在庫集計詳細を取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT CTTL_ID, CTTL_PRD_ID, CTTL_G_NM, CTTL_COL_NM, CTTL_ROW_NM, 
+                       CTTL_COL_KEY, CTTL_ROW_KEY
+                FROM CTTL_MST
+                WHERE CTTL_ID = :cttl_id
+                ORDER BY CTTL_COL_KEY, CTTL_ROW_KEY
+            """)
+            
+            results = session.execute(sql, {'cttl_id': cttl_id}).fetchall()
+            
+            result = []
+            for r in results:
+                detail = {
+                    'CTTL_ID': r.CTTL_ID,
+                    'CTTL_PRD_ID': r.CTTL_PRD_ID,
+                    'CTTL_G_NM': r.CTTL_G_NM,
+                    'CTTL_COL_NM': r.CTTL_COL_NM,
+                    'CTTL_ROW_NM': r.CTTL_ROW_NM,
+                    'CTTL_COL_KEY': r.CTTL_COL_KEY,
+                    'CTTL_ROW_KEY': r.CTTL_ROW_KEY
+                }
+                result.append(detail)
+            return result
+            
+        except Exception as e:
+            log_error(f"在庫集計詳細の取得中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def get_stock_matrix_data(cttl_id):
+        """在庫集計マスタをベースにしたマトリックスデータを取得する"""
+        session = get_db_session()
+        try:
+            # 在庫数を取得するSQLクエリ
+            sql = text("""
+                SELECT 
+                    CTTL_COL_KEY,
+                    CTTL_ROW_KEY,
+                    ISNULL(SUM(dbo.Get_CPRD_ZAN_Qty(CPDD_ID)), 0) as zaiko
+                FROM CTTL_MST
+                LEFT OUTER JOIN CPRD_DAT ON CPDD_PRD_ID = CTTL_PRD_ID
+                AND dbo.Get_CPRD_ZAN_Qty(CPDD_ID) > 0
+                WHERE CTTL_ID = :cttl_id
+                GROUP BY CTTL_COL_KEY, CTTL_ROW_KEY
+            """)
+            
+            results = session.execute(sql, {'cttl_id': cttl_id}).fetchall()
+            
+            # データを集計してマトリックス形式に変換
+            matrix_data = {}
+            for row in results:
+                key = (row.CTTL_COL_KEY, row.CTTL_ROW_KEY)
+                if key not in matrix_data:
+                    matrix_data[key] = {'zaiko': 0}
+                matrix_data[key]['zaiko'] = row.zaiko
+            
+            return matrix_data
+            
+        except Exception as e:
+            log_error(f"在庫マトリックスデータの取得中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def get_all():
+        """すべての在庫集計マスタデータを取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT 
+                    c.CTTL_ID,
+                    c.CTTL_PRD_ID,
+                    c.CTTL_G_NM,
+                    c.CTTL_COL_NM,
+                    c.CTTL_ROW_NM,
+                    c.CTTL_COL_KEY,
+                    c.CTTL_ROW_KEY,
+                    p.PRD_DSP_NM as PRD_NAME
+                FROM CTTL_MST c
+                LEFT OUTER JOIN PRD_MST p ON c.CTTL_PRD_ID = p.PRD_ID
+                ORDER BY c.CTTL_ID, c.CTTL_PRD_ID
+            """)
+            
+            results = session.execute(sql).fetchall()
+            
+            result = []
+            for r in results:
+                cttl_data = {
+                    'CTTL_ID': r.CTTL_ID,
+                    'CTTL_PRD_ID': r.CTTL_PRD_ID,
+                    'CTTL_G_NM': r.CTTL_G_NM,
+                    'CTTL_COL_NM': r.CTTL_COL_NM,
+                    'CTTL_ROW_NM': r.CTTL_ROW_NM,
+                    'CTTL_COL_KEY': r.CTTL_COL_KEY,
+                    'CTTL_ROW_KEY': r.CTTL_ROW_KEY,
+                    'PRD_NAME': r.PRD_NAME
+                }
+                result.append(cttl_data)
+            return result
+            
+        except Exception as e:
+            log_error(f"在庫集計マスタ一覧の取得中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def get_by_id(cttl_id, cttl_prd_id):
+        """指定されたIDの在庫集計マスタデータを取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT 
+                    c.CTTL_ID,
+                    c.CTTL_PRD_ID,
+                    c.CTTL_G_NM,
+                    c.CTTL_COL_NM,
+                    c.CTTL_ROW_NM,
+                    c.CTTL_COL_KEY,
+                    c.CTTL_ROW_KEY,
+                    p.PRD_DSP_NM as PRD_NAME
+                FROM CTTL_MST c
+                LEFT OUTER JOIN PRD_MST p ON c.CTTL_PRD_ID = p.PRD_ID
+                WHERE c.CTTL_ID = :cttl_id AND c.CTTL_PRD_ID = :cttl_prd_id
+            """)
+            
+            result = session.execute(sql, {'cttl_id': cttl_id, 'cttl_prd_id': cttl_prd_id}).fetchone()
+            
+            if result:
+                cttl_data = {
+                    'CTTL_ID': result.CTTL_ID,
+                    'CTTL_PRD_ID': result.CTTL_PRD_ID,
+                    'CTTL_G_NM': result.CTTL_G_NM,
+                    'CTTL_COL_NM': result.CTTL_COL_NM,
+                    'CTTL_ROW_NM': result.CTTL_ROW_NM,
+                    'CTTL_COL_KEY': result.CTTL_COL_KEY,
+                    'CTTL_ROW_KEY': result.CTTL_ROW_KEY,
+                    'PRD_NAME': result.PRD_NAME
+                }
+                return cttl_data
+            return None
+            
+        except Exception as e:
+            log_error(f"在庫集計マスタデータの取得中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def create(cttl_id, cttl_prd_id, cttl_g_nm, cttl_col_nm, cttl_row_nm, cttl_col_key, cttl_row_key):
+        """在庫集計マスタデータを作成する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                INSERT INTO CTTL_MST (CTTL_ID, CTTL_PRD_ID, CTTL_G_NM, CTTL_COL_NM, CTTL_ROW_NM, CTTL_COL_KEY, CTTL_ROW_KEY)
+                VALUES (:cttl_id, :cttl_prd_id, :cttl_g_nm, :cttl_col_nm, :cttl_row_nm, :cttl_col_key, :cttl_row_key)
+            """)
+            
+            session.execute(sql, {
+                'cttl_id': cttl_id,
+                'cttl_prd_id': cttl_prd_id,
+                'cttl_g_nm': cttl_g_nm,
+                'cttl_col_nm': cttl_col_nm,
+                'cttl_row_nm': cttl_row_nm,
+                'cttl_col_key': cttl_col_key,
+                'cttl_row_key': cttl_row_key
+            })
+            
+            session.commit()
+            
+        except Exception as e:
+            session.rollback()
+            log_error(f"在庫集計マスタデータの作成中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def update(cttl_id, cttl_prd_id, cttl_data):
+        """在庫集計マスタデータを更新する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                UPDATE CTTL_MST 
+                SET CTTL_G_NM = :cttl_g_nm,
+                    CTTL_COL_NM = :cttl_col_nm,
+                    CTTL_ROW_NM = :cttl_row_nm,
+                    CTTL_COL_KEY = :cttl_col_key,
+                    CTTL_ROW_KEY = :cttl_row_key
+                WHERE CTTL_ID = :cttl_id AND CTTL_PRD_ID = :cttl_prd_id
+            """)
+            
+            session.execute(sql, {
+                'cttl_id': cttl_id,
+                'cttl_prd_id': cttl_prd_id,
+                'cttl_g_nm': cttl_data['cttl_g_nm'],
+                'cttl_col_nm': cttl_data['cttl_col_nm'],
+                'cttl_row_nm': cttl_data['cttl_row_nm'],
+                'cttl_col_key': cttl_data['cttl_col_key'],
+                'cttl_row_key': cttl_data['cttl_row_key']
+            })
+            
+            session.commit()
+            
+        except Exception as e:
+            session.rollback()
+            log_error(f"在庫集計マスタデータの更新中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def delete(cttl_id, cttl_prd_id):
+        """在庫集計マスタデータを削除する"""
+        session = get_db_session()
+        try:
+            sql = text("DELETE FROM CTTL_MST WHERE CTTL_ID = :cttl_id AND CTTL_PRD_ID = :cttl_prd_id")
+            session.execute(sql, {'cttl_id': cttl_id, 'cttl_prd_id': cttl_prd_id})
+            session.commit()
+            
+        except Exception as e:
+            session.rollback()
+            log_error(f"在庫集計マスタデータの削除中にエラーが発生: {str(e)}")
+            raise
+        finally:
+            session.close()
+    
+    @staticmethod
+    def get_group_choices():
+        """在庫集計グループIDの選択肢を取得する"""
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT DISTINCT CTTL_ID, CTTL_G_NM
+                FROM CTTL_MST
+                ORDER BY CTTL_ID
+            """)
+            
+            results = session.execute(sql).fetchall()
+            
+            choices = [('', '選択してください')]
+            for r in results:
+                choices.append((r.CTTL_ID, f"{r.CTTL_ID} - {r.CTTL_G_NM or '未設定'}"))
+            
+            return choices
+            
+        except Exception as e:
+            log_error(f"在庫集計グループ選択肢の取得中にエラーが発生: {str(e)}")
             raise
         finally:
             session.close()

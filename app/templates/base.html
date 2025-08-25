@@ -314,6 +314,11 @@
                                                 <i class="bi bi-table"></i> 加工集計マトリックス
                                             </a>
                                         </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'total.stock_matrix_cttl' %}active{% endif %}" href="{{ url_for('total.stock_matrix_cttl') }}">
+                                                <i class="bi bi-box"></i> 在庫集計マトリックス
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
@@ -448,6 +453,11 @@
                                         <li class="nav-item">
                                             <a class="nav-link {% if request.endpoint == 'total.cprg_list' %}active{% endif %}" href="{{ url_for('total.cprg_list') }}">
                                                 <i class="bi bi-diagram-3"></i> 加工集計グループマスタ一覧
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if request.endpoint == 'total.cttl_list' %}active{% endif %}" href="{{ url_for('total.cttl_list') }}">
+                                                <i class="bi bi-box"></i> 在庫集計マスタ一覧
                                             </a>
                                         </li>
                                     </ul>
