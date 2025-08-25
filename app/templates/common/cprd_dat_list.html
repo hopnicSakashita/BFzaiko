@@ -131,16 +131,10 @@
                                                    class="btn btn-sm btn-outline-primary" title="編集">
                                                     <i class="bi bi-pencil-square"></i> 編集
                                                 </a>
-                                                {% if cprd.ZAIKO_ZAN and cprd.ZAIKO_ZAN > 0 %}
                                                 <a href="{{ url_for('common.cprd_dat_shipment_create', cpdd_id=cprd.CPDD_ID) }}" 
                                                    class="btn btn-sm btn-outline-info" title="出庫">
                                                     <i class="bi bi-box-arrow-right"></i> 出庫
                                                 </a>
-                                                {% else %}
-                                                <span class="btn btn-sm btn-outline-secondary" title="在庫残がないため出庫不可">
-                                                    <i class="bi bi-box-arrow-right"></i> 出庫不可
-                                                </span>
-                                                {% endif %}
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                                         onclick="confirmDelete({{ cprd.CPDD_ID }})" title="削除">
                                                     <i class="bi bi-trash"></i> 削除
