@@ -16,7 +16,7 @@
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('common.cprd_dat_list') }}" id="searchForm">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="prd_id" class="form-label">製品ID</label>
                                 <div class="input-group">
                                     <select class="form-control" id="prd_id_select" style="border-radius: 0.375rem 0 0 0.375rem;">
@@ -36,6 +36,11 @@
                                 <div class="form-text">製品IDを選択するか、直接入力してください（5文字以内）</div>
                             </div>
                             <div class="col-md-2">
+                                <label for="prd_name" class="form-label">製品名</label>
+                                <input type="text" class="form-control" id="prd_name" name="prd_name" 
+                                       value="{{ search_prd_name or '' }}" placeholder="部分一致検索">
+                            </div>
+                            <div class="col-md-2">
                                 <label for="lot" class="form-label">LOT</label>
                                 <input type="number" class="form-control" id="lot" name="lot" 
                                        value="{{ search_lot or '' }}" min="0" max="999999">
@@ -52,7 +57,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="stock_status" class="form-label">在庫状況</label>
                                 <select class="form-control" id="stock_status" name="stock_status">
                                     <option value="">全て</option>
@@ -559,7 +564,7 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     
     // 500件超過時の確認ダイアログ
     const formData = new FormData(this);
-    const hasConditions = formData.get('prd_id') || formData.get('lot') || formData.get('rank');
+    const hasConditions = formData.get('prd_id') || formData.get('prd_name') || formData.get('lot') || formData.get('rank');
     
     if (hasConditions && formData.get('search') === '1') {
         // 検索条件が設定されている場合は一旦実行を許可
@@ -580,8 +585,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
-        const container = document.querySelector('.container-fluid');
-        container.insertBefore(alertDiv, container.firstChild);
+        // サイドメニューがある場合のメッセージ表示位置調整
+        const mainContent = document.querySelector('.container-fluid .row .col-12');
+        if (mainContent) {
+            mainContent.insertBefore(alertDiv, mainContent.firstChild);
+        } else {
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+        }
     }
 });
 {% endif %}

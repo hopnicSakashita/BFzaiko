@@ -19,7 +19,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('master_cztr_list') }}" class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="cztr_kbn" class="form-label">取引先区分</label>
                             <select class="form-select" id="cztr_kbn" name="cztr_kbn">
                                 {% for value, label in cztr_kbn_choices %}
@@ -29,7 +29,22 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label for="cztr_nm" class="form-label">取引先名</label>
+                            <input type="text" class="form-control" id="cztr_nm" name="cztr_nm" 
+                                   value="{{ search_cztr_nm or '' }}" placeholder="部分一致検索">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cztr_full_nm" class="form-label">正式名称</label>
+                            <input type="text" class="form-control" id="cztr_full_nm" name="cztr_full_nm" 
+                                   value="{{ search_cztr_full_nm or '' }}" placeholder="部分一致検索">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cztr_tanto_nm" class="form-label">担当者名</label>
+                            <input type="text" class="form-control" id="cztr_tanto_nm" name="cztr_tanto_nm" 
+                                   value="{{ search_cztr_tanto_nm or '' }}" placeholder="部分一致検索">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">表示条件</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="cztr_flg" name="cztr_flg" value="0" 
@@ -39,7 +54,7 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
+                        <div class="col-md-6 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="bi bi-search"></i> 検索
                             </button>

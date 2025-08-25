@@ -285,6 +285,8 @@ def master_cprc_list():
         # 検索条件を取得
         prd_id = request.args.get('prd_id', '').strip()
         only_active = request.args.get('only_active') == '1'
+        cprc_nm = request.args.get('cprc_nm', '').strip()
+        cprc_prd_nm = request.args.get('cprc_prd_nm', '').strip()
         
         # 製品IDの選択肢を取得
         session = get_db_session()
@@ -322,6 +324,15 @@ def master_cprc_list():
                 """)
                 params = {}
                 
+                # 部分一致検索条件を追加
+                if cprc_nm:
+                    sql = text(str(sql) + " AND CPRC_NM LIKE :cprc_nm")
+                    params['cprc_nm'] = f'%{cprc_nm}%'
+                
+                if cprc_prd_nm:
+                    sql = text(str(sql) + " AND CPRC_PRD_NM LIKE :cprc_prd_nm")
+                    params['cprc_prd_nm'] = f'%{cprc_prd_nm}%'
+                
                 if only_active:
                     sql = text(str(sql) + " AND CPRC_FLG = :cprc_flg")
                     params['cprc_flg'] = DatabaseConstants.FLG_ACTIVE
@@ -349,7 +360,9 @@ def master_cprc_list():
                              cprc_list=cprc_list, 
                              prd_id_choices=prd_id_choices,
                              search_prd_id=prd_id,
-                             only_active=only_active)
+                             only_active=only_active,
+                             search_cprc_nm=cprc_nm,
+                             search_cprc_prd_nm=cprc_prd_nm)
     except Exception as e:
         flash(f'加工マスタ一覧の表示中にエラーが発生しました: {str(e)}', 'error')
         return redirect(url_for('index'))
@@ -656,6 +669,9 @@ def master_cztr_list():
         # 検索条件を取得
         cztr_kbn = request.args.get('cztr_kbn', '').strip()
         cztr_flg = request.args.get('cztr_flg')
+        cztr_nm = request.args.get('cztr_nm', '').strip()
+        cztr_full_nm = request.args.get('cztr_full_nm', '').strip()
+        cztr_tanto_nm = request.args.get('cztr_tanto_nm', '').strip()
         
         # 取引先区分の選択肢を取得
         cztr_kbn_choices = [
@@ -666,21 +682,63 @@ def master_cztr_list():
         ]
         
         # データを取得
-        if cztr_kbn:
-            # 特定の区分で絞り込み
-            cztr_list = CztrMstModel.get_by_kbn(int(cztr_kbn))
-        else:
-            cztr_list = CztrMstModel.get_all()
-        
-        # フラグで絞り込み（cztr_flgが'0'の場合のみ有効なもののみ表示）
-        if cztr_flg == '0':
-            cztr_list = [cztr for cztr in cztr_list if cztr['CZTR_FLG'] == DatabaseConstants.FLG_ACTIVE]
+        session = get_db_session()
+        try:
+            sql = text("""
+                SELECT CZTR_ID, CZTR_NM, CZTR_FULL_NM, CZTR_TANTO_NM, CZTR_KBN, CZTR_TYP, CZTR_FLG
+                FROM CZTR_MST 
+                WHERE 1=1
+            """)
+            params = {}
+            
+            if cztr_kbn:
+                sql = text(str(sql) + " AND CZTR_KBN = :cztr_kbn")
+                params['cztr_kbn'] = int(cztr_kbn)
+            
+            # 部分一致検索条件を追加
+            if cztr_nm:
+                sql = text(str(sql) + " AND CZTR_NM LIKE :cztr_nm")
+                params['cztr_nm'] = f'%{cztr_nm}%'
+            
+            if cztr_full_nm:
+                sql = text(str(sql) + " AND CZTR_FULL_NM LIKE :cztr_full_nm")
+                params['cztr_full_nm'] = f'%{cztr_full_nm}%'
+            
+            if cztr_tanto_nm:
+                sql = text(str(sql) + " AND CZTR_TANTO_NM LIKE :cztr_tanto_nm")
+                params['cztr_tanto_nm'] = f'%{cztr_tanto_nm}%'
+            
+            # フラグで絞り込み（cztr_flgが'0'の場合のみ有効なもののみ表示）
+            if cztr_flg == '0':
+                sql = text(str(sql) + " AND CZTR_FLG = :cztr_flg")
+                params['cztr_flg'] = DatabaseConstants.FLG_ACTIVE
+            
+            sql = text(str(sql) + " ORDER BY CZTR_ID")
+            
+            results = session.execute(sql, params).fetchall()
+            cztr_list = []
+            for r in results:
+                cztr_data = {
+                    'CZTR_ID': r.CZTR_ID,
+                    'CZTR_NM': r.CZTR_NM,
+                    'CZTR_FULL_NM': r.CZTR_FULL_NM,
+                    'CZTR_TANTO_NM': r.CZTR_TANTO_NM,
+                    'CZTR_KBN': r.CZTR_KBN,
+                    'CZTR_TYP': r.CZTR_TYP,
+                    'CZTR_FLG': r.CZTR_FLG
+                }
+                cztr_list.append(cztr_data)
+        finally:
+            session.close()
         
         return render_template('master/cztr_list.html', 
                              cztr_list=cztr_list, 
                              cztr_kbn_choices=cztr_kbn_choices,
                              search_cztr_kbn=cztr_kbn,
-                             cztr_flg=cztr_flg)
+                             cztr_flg=cztr_flg,
+                             search_cztr_nm=cztr_nm,
+                             search_cztr_full_nm=cztr_full_nm,
+                             search_cztr_tanto_nm=cztr_tanto_nm)
     except Exception as e:
         flash(f'取引先マスタ一覧の表示中にエラーが発生しました: {str(e)}', 'error')
         return redirect(url_for('index'))
@@ -693,6 +751,9 @@ def master_prd_list():
         # 検索条件を取得
         prd_kbn = request.args.get('prd_kbn', '').strip()
         prd_flg = request.args.get('prd_flg')
+        prd_name = request.args.get('prd_name', '').strip()
+        prd_film_color = request.args.get('prd_film_color', '').strip()
+        prd_monomer = request.args.get('prd_monomer', '').strip()
         
         # 商品分類の選択肢を取得
         prd_kbn_choices = [
@@ -718,6 +779,19 @@ def master_prd_list():
             if prd_kbn:
                 sql = text(str(sql) + " AND PRD_KBN = :prd_kbn")
                 params['prd_kbn'] = int(prd_kbn)
+            
+            # 部分一致検索条件を追加
+            if prd_name:
+                sql = text(str(sql) + " AND PRD_NAME LIKE :prd_name")
+                params['prd_name'] = f'%{prd_name}%'
+            
+            if prd_film_color:
+                sql = text(str(sql) + " AND PRD_FILM_COLOR LIKE :prd_film_color")
+                params['prd_film_color'] = f'%{prd_film_color}%'
+            
+            if prd_monomer:
+                sql = text(str(sql) + " AND PRD_MONOMER LIKE :prd_monomer")
+                params['prd_monomer'] = f'%{prd_monomer}%'
             
             # フラグで絞り込み（prd_flgが'0'の場合のみ有効なもののみ表示）
             if prd_flg == '0':
@@ -748,7 +822,10 @@ def master_prd_list():
                              prd_list=prd_list, 
                              prd_kbn_choices=prd_kbn_choices,
                              search_prd_kbn=prd_kbn,
-                             prd_flg=prd_flg)
+                             prd_flg=prd_flg,
+                             search_prd_name=prd_name,
+                             search_prd_film_color=prd_film_color,
+                             search_prd_monomer=prd_monomer)
     except Exception as e:
         flash(f'製品マスタ一覧の表示中にエラーが発生しました: {str(e)}', 'error')
         return redirect(url_for('index'))

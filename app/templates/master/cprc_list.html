@@ -19,7 +19,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('master_cprc_list') }}" class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="prd_id" class="form-label">製品ID</label>
                             <select class="form-select" id="prd_id" name="prd_id">
                                 {% for value, label in prd_id_choices %}
@@ -29,7 +29,17 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label for="cprc_nm" class="form-label">加工名</label>
+                            <input type="text" class="form-control" id="cprc_nm" name="cprc_nm" 
+                                   value="{{ search_cprc_nm or '' }}" placeholder="部分一致検索">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cprc_prd_nm" class="form-label">加工前製品名</label>
+                            <input type="text" class="form-control" id="cprc_prd_nm" name="cprc_prd_nm" 
+                                   value="{{ search_cprc_prd_nm or '' }}" placeholder="部分一致検索">
+                        </div>
+                        <div class="col-md-3">
                             <div class="form-check mt-4">
                                 <input class="form-check-input" type="checkbox" id="only_active" name="only_active" value="1" {% if only_active %}checked{% endif %}>
                                 <label class="form-check-label" for="only_active">
@@ -37,7 +47,7 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
+                        <div class="col-md-12 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="bi bi-search"></i> 検索
                             </button>
