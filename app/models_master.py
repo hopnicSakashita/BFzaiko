@@ -476,7 +476,7 @@ class PrdMstModel(Base):
         session = get_db_session()
         try:
             sql = text("""
-                SELECT DISTINCT PRD_ID, PRD_DSP_NM
+                SELECT DISTINCT PRD_ID, PRD_DSP_NM, PRD_NAME
                 FROM PRD_MST
                 WHERE PRD_FLG = :prd_flg_active
                 ORDER BY PRD_ID

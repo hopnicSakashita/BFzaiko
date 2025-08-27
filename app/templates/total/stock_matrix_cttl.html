@@ -18,7 +18,7 @@
                             <select class="form-control" id="cttl_id" name="cttl_id" required>
                                 <option value="">選択してください</option>
                                 {% for group in cttl_groups %}
-                                    <option value="{{ group.CTTL_ID }}" {% if search_cttl_id == group.CTTL_ID %}selected{% endif %}>
+                                    <option value="{{ group.CTTL_ID }}" {% if search_cttl_id|string == group.CTTL_ID|string %}selected{% endif %}>
                                         {{ group.CTTL_ID }} - {{ group.CTTL_G_NM or '未設定' }}
                                     </option>
                                 {% endfor %}
@@ -56,6 +56,7 @@
                                         {{ col_detail.CTTL_COL_NM or '未設定' }}
                                     </th>
                                 {% endfor %}
+                                <th class="text-center table-warning" style="min-width: 120px;">行合計</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,8 +80,42 @@
                                             {% endif %}
                                         </td>
                                     {% endfor %}
+                                    <td class="text-center table-warning fw-bold">
+                                        {% set row_total = row_totals.get(row_key, 0) %}
+                                        {% if row_total > 0 %}
+                                            <span class="badge bg-warning text-dark" title="行合計">
+                                                {{ row_total }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
+                            <tr class="table-warning">
+                                <td class="fw-bold">列合計</td>
+                                {% for col_key in unique_col_keys %}
+                                    <td class="text-center fw-bold">
+                                        {% set col_total = col_totals.get(col_key, 0) %}
+                                        {% if col_total > 0 %}
+                                            <span class="badge bg-warning text-dark" title="列合計">
+                                                {{ col_total }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td class="text-center fw-bold">
+                                    {% if grand_total > 0 %}
+                                        <span class="badge bg-success" title="総合計">
+                                            {{ grand_total }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -94,17 +129,27 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <h6>数値の意味</h6>
                         <ul class="list-unstyled">
                             <li><span class="badge bg-primary me-2">数値</span> 在庫数</li>
+                            <li><span class="badge bg-warning text-dark me-2">数値</span> 行・列合計</li>
+                            <li><span class="badge bg-success me-2">数値</span> 総合計</li>
                         </ul>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <h6>表示形式</h6>
                         <ul class="list-unstyled">
                             <li><strong>「在庫数」</strong> の形式で表示</li>
                             <li><strong>「-」</strong> データなし</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>合計表示</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>行合計</strong> 各行の在庫数合計</li>
+                            <li><strong>列合計</strong> 各列の在庫数合計</li>
+                            <li><strong>総合計</strong> 全体の在庫数合計</li>
                         </ul>
                     </div>
                 </div>

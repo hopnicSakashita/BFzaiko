@@ -497,13 +497,35 @@ class CttlMstModel(Base):
             
             # データを集計してマトリックス形式に変換
             matrix_data = {}
+            col_totals = {}  # 列ごとの合計
+            row_totals = {}  # 行ごとの合計
+            grand_total = 0  # 総合計
+            
             for row in results:
                 key = (row.CTTL_COL_KEY, row.CTTL_ROW_KEY)
                 if key not in matrix_data:
                     matrix_data[key] = {'zaiko': 0}
                 matrix_data[key]['zaiko'] = row.zaiko
+                
+                # 列ごとの合計を計算
+                if row.CTTL_COL_KEY not in col_totals:
+                    col_totals[row.CTTL_COL_KEY] = 0
+                col_totals[row.CTTL_COL_KEY] += row.zaiko
+                
+                # 行ごとの合計を計算
+                if row.CTTL_ROW_KEY not in row_totals:
+                    row_totals[row.CTTL_ROW_KEY] = 0
+                row_totals[row.CTTL_ROW_KEY] += row.zaiko
+                
+                # 総合計を計算
+                grand_total += row.zaiko
             
-            return matrix_data
+            return {
+                'matrix_data': matrix_data,
+                'col_totals': col_totals,
+                'row_totals': row_totals,
+                'grand_total': grand_total
+            }
             
         except Exception as e:
             log_error(f"在庫マトリックスデータの取得中にエラーが発生: {str(e)}")

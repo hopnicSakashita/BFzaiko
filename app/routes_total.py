@@ -52,21 +52,48 @@ def stock_matrix_cttl():
         # 検索条件を取得
         cttl_id = request.args.get('cttl_id', '').strip()
         searched = request.args.get('searched', '').strip()
+        log_error(f"検索条件 - cttl_id: '{cttl_id}', searched: '{searched}'")
         
         # 在庫集計グループ一覧を取得
         cttl_groups = CttlMstModel.get_cttl_groups()
+        log_error(f"取得したグループ数: {len(cttl_groups)}")
+        for group in cttl_groups:
+            log_error(f"グループ: {group}")
         
         matrix_data = {}
         cttl_details = []
         
         # 検索ボタンが押された場合のみデータを取得
         if searched == '1' and cttl_id:
-            matrix_data = CttlMstModel.get_stock_matrix_data(cttl_id)
-            cttl_details = CttlMstModel.get_cttl_details(cttl_id)
+            try:
+                # cttl_idを数値に変換
+                cttl_id_int = int(cttl_id)
+                matrix_result = CttlMstModel.get_stock_matrix_data(cttl_id_int)
+                matrix_data = matrix_result['matrix_data']
+                col_totals = matrix_result['col_totals']
+                row_totals = matrix_result['row_totals']
+                grand_total = matrix_result['grand_total']
+                cttl_details = CttlMstModel.get_cttl_details(cttl_id_int)
+            except ValueError:
+                flash('在庫集計グループIDは数値で入力してください。', 'error')
+                matrix_data = {}
+                col_totals = {}
+                row_totals = {}
+                grand_total = 0
+                cttl_details = []
+        else:
+            matrix_data = {}
+            col_totals = {}
+            row_totals = {}
+            grand_total = 0
+            cttl_details = []
         
         return render_template('total/stock_matrix_cttl.html', 
                              cttl_groups=cttl_groups,
                              matrix_data=matrix_data,
+                             col_totals=col_totals,
+                             row_totals=row_totals,
+                             grand_total=grand_total,
                              cttl_details=cttl_details,
                              search_cttl_id=cttl_id,
                              searched=searched)
@@ -85,14 +112,24 @@ def cttl_list():
     try:
         # 検索条件を取得
         cttl_id = request.args.get('cttl_id', '').strip()
+        log_error(f"検索条件 - cttl_id: '{cttl_id}'")
         
         # 在庫集計グループIDの選択肢を取得
         cttl_id_choices = CttlMstModel.get_group_choices()
+        log_error(f"取得した選択肢数: {len(cttl_id_choices)}")
+        for choice in cttl_id_choices:
+            log_error(f"選択肢: {choice}")
         
         # データを取得
         if cttl_id:
-            # 特定のグループIDで絞り込み
-            cttl_list = [item for item in CttlMstModel.get_all() if item['CTTL_ID'] == cttl_id]
+            try:
+                # cttl_idを数値に変換
+                cttl_id_int = int(cttl_id)
+                # 特定のグループIDで絞り込み
+                cttl_list = [item for item in CttlMstModel.get_all() if item['CTTL_ID'] == cttl_id_int]
+            except ValueError:
+                flash('在庫集計グループIDは数値で入力してください。', 'error')
+                cttl_list = CttlMstModel.get_all()
         else:
             cttl_list = CttlMstModel.get_all()
         

@@ -23,7 +23,7 @@
                             <label for="cttl_id" class="form-label">グループID</label>
                             <select class="form-select" id="cttl_id" name="cttl_id">
                                 {% for value, label in cttl_id_choices %}
-                                <option value="{{ value }}" {% if value == search_cttl_id %}selected{% endif %}>
+                                <option value="{{ value }}" {% if value|string == search_cttl_id|string %}selected{% endif %}>
                                     {{ label }}
                                 </option>
                                 {% endfor %}
