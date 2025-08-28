@@ -638,7 +638,7 @@ class ShipmentCommon:
     
     @staticmethod
     def delete_shipment(cshk_id):
-        """出荷データを削除する（CSHK_KBN=0のデータのみ）"""
+        """出荷データを削除する（出荷区分または加工区分で加工依頼残が0の場合のみ）"""
         session = get_db_session()
         try:
             # 既存データを取得
@@ -646,13 +646,23 @@ class ShipmentCommon:
             if not cshk:
                 raise ValueError('指定された出荷データが見つかりません。')
             
-            # 出荷区分が0（出荷）でない場合は削除不可
-            if cshk.CSHK_KBN != DatabaseConstants.CSHK_KBN_SHIPMENT:
-                raise ValueError('出荷区分でないデータは削除できません。')
-            
             # フラグが0以外の場合は削除不可
             if cshk.CSHK_FLG != DatabaseConstants.FLG_ACTIVE:
                 raise ValueError('このデータはフラグが0以外のため、削除できません。')
+            
+            # 出荷区分の場合
+            if cshk.CSHK_KBN == DatabaseConstants.CSHK_KBN_SHIPMENT:
+                # 出荷区分の場合は削除可能
+                pass
+            # 加工区分の場合
+            elif cshk.CSHK_KBN == DatabaseConstants.CSHK_KBN_PROCESS:
+                # 加工依頼数と加工依頼残をチェック
+                prc_zan_qty = ShipmentCommon.get_prc_zan_qty(cshk_id)
+                if prc_zan_qty != cshk.CSHK_QTY:
+                    raise ValueError(f'加工依頼数({cshk.CSHK_QTY})と加工依頼残数({prc_zan_qty})が一致していないため、削除できません。')
+            # その他の区分の場合
+            else:
+                raise ValueError('出荷区分または加工区分でないデータは削除できません。')
             
             # データを削除
             session.delete(cshk)
