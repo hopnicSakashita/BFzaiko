@@ -105,6 +105,7 @@ def cprd_dat_list():
         # 検索パラメータの取得
         prd_id = request.args.get('prd_id', '').strip()
         prd_name = request.args.get('prd_name', '').strip()
+        prd_monomer = request.args.get('prd_monomer', '').strip()
         lot = request.args.get('lot', '').strip()
         rank = request.args.get('rank', '').strip()
         stock_status = request.args.get('stock_status', '').strip()
@@ -130,11 +131,12 @@ def cprd_dat_list():
         # データの検索
         cprd_list = []
         if is_search_executed:
-            if any([prd_id, prd_name, lot, rank_value is not None, stock_status_value is not None]):
+            if any([prd_id, prd_name, prd_monomer, lot, rank_value is not None, stock_status_value is not None]):
                 # 検索条件が指定された場合
                 cprd_list = CprdDatModel.search_with_zaiko_zan(
                     prd_id=prd_id if prd_id else None,
                     prd_name=prd_name if prd_name else None,
+                    prd_monomer=prd_monomer if prd_monomer else None,
                     lot=int(lot) if lot.isdigit() else None,
                     rank=rank_value,
                     stock_status=stock_status_value,
@@ -150,6 +152,7 @@ def cprd_dat_list():
                              rank_list=rank_list,
                              search_prd_id=prd_id,
                              search_prd_name=prd_name,
+                             search_prd_monomer=prd_monomer,
                              search_lot=lot,
                              search_rank=rank,
                              search_stock_status=stock_status,

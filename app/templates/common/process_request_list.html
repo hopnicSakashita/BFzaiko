@@ -104,6 +104,7 @@
                                     <tr>
                                         <th>加工依頼日</th>
                                         <th>製品ID</th>
+                                        <th>LOT</th>
                                         <th>加工前製品名</th>
                                         <th>加工名</th>
                                         <th>加工先</th>
@@ -117,6 +118,7 @@
                                     <tr>
                                         <td>{{ req.CSHK_DT or '－' }}</td>
                                         <td>{{ req.CSHK_PRD_ID or '－' }}</td>
+                                        <td>{{ req.CPDD_LOT or '－' }}</td>
                                         <td>{{ req.CPRC_PRD_NM or '－' }}</td>
                                         <td>{{ req.PRC_NAME or '－' }}</td>
                                         <td>{{ req.PRC_TO_NAME or '－' }}</td>

@@ -112,31 +112,38 @@ def cttl_list():
     try:
         # 検索条件を取得
         cttl_id = request.args.get('cttl_id', '').strip()
-        log_error(f"検索条件 - cttl_id: '{cttl_id}'")
+        prd_id = request.args.get('prd_id', '').strip()
+        cttl_col_nm = request.args.get('cttl_col_nm', '').strip()
+        cttl_row_nm = request.args.get('cttl_row_nm', '').strip()
+        cttl_col_key = request.args.get('cttl_col_key', '').strip()
+        cttl_row_key = request.args.get('cttl_row_key', '').strip()
         
         # 在庫集計グループIDの選択肢を取得
         cttl_id_choices = CttlMstModel.get_group_choices()
-        log_error(f"取得した選択肢数: {len(cttl_id_choices)}")
-        for choice in cttl_id_choices:
-            log_error(f"選択肢: {choice}")
+        
+        # 製品マスタの選択肢を取得
+        prd_list = PrdMstModel.get_all()
         
         # データを取得
-        if cttl_id:
-            try:
-                # cttl_idを数値に変換
-                cttl_id_int = int(cttl_id)
-                # 特定のグループIDで絞り込み
-                cttl_list = [item for item in CttlMstModel.get_all() if item['CTTL_ID'] == cttl_id_int]
-            except ValueError:
-                flash('在庫集計グループIDは数値で入力してください。', 'error')
-                cttl_list = CttlMstModel.get_all()
-        else:
-            cttl_list = CttlMstModel.get_all()
+        cttl_list = CttlMstModel.search(
+            cttl_id=cttl_id if cttl_id else None,
+            prd_id=prd_id if prd_id else None,
+            cttl_col_nm=cttl_col_nm if cttl_col_nm else None,
+            cttl_row_nm=cttl_row_nm if cttl_row_nm else None,
+            cttl_col_key=int(cttl_col_key) if cttl_col_key and cttl_col_key.isdigit() else None,
+            cttl_row_key=int(cttl_row_key) if cttl_row_key and cttl_row_key.isdigit() else None
+        )
         
         return render_template('master/cttl_list.html', 
                              cttl_list=cttl_list, 
                              cttl_id_choices=cttl_id_choices,
-                             search_cttl_id=cttl_id)
+                             prd_list=prd_list,
+                             search_cttl_id=cttl_id,
+                             search_prd_id=prd_id,
+                             search_cttl_col_nm=cttl_col_nm,
+                             search_cttl_row_nm=cttl_row_nm,
+                             search_cttl_col_key=cttl_col_key,
+                             search_cttl_row_key=cttl_row_key)
     except Exception as e:
         flash(f'在庫集計マスタ一覧の表示中にエラーが発生しました: {str(e)}', 'error')
         return redirect(url_for('index'))

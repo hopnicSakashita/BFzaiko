@@ -570,7 +570,7 @@ class CprdDatModel(Base):
             session.close()
     
     @staticmethod
-    def search_with_zaiko_zan(prd_id=None, prd_name=None, lot=None, rank=None, stock_status=None, flg=None):
+    def search_with_zaiko_zan(prd_id=None, prd_name=None, prd_monomer=None, lot=None, rank=None, stock_status=None, flg=None):
         """入庫データを在庫残数量付きで検索する"""
         session = get_db_session()
         try:
@@ -604,6 +604,9 @@ class CprdDatModel(Base):
             if prd_name:
                 sql += " AND p.PRD_DSP_NM LIKE :prd_name"
                 params['prd_name'] = f'%{prd_name}%'
+            if prd_monomer:
+                sql += " AND p.PRD_MONOMER LIKE :prd_monomer"
+                params['prd_monomer'] = f'%{prd_monomer}%'
             if lot is not None:
                 sql += " AND c.CPDD_LOT = :lot"
                 params['lot'] = lot

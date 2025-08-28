@@ -19,7 +19,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('total.cttl_list') }}" class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="cttl_id" class="form-label">グループID</label>
                             <select class="form-select" id="cttl_id" name="cttl_id">
                                 {% for value, label in cttl_id_choices %}
@@ -29,14 +29,53 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="bi bi-search"></i> 検索
-                            </button>
-                            <a href="{{ url_for('total.cttl_list') }}" class="btn btn-secondary">
-                                <i class="bi bi-arrow-clockwise"></i> リセット
-                            </a>
+                        <div class="col-md-3">
+                            <label for="prd_id" class="form-label">製品ID</label>
+                            <div class="input-group">
+                                <select class="form-control" id="prd_id_select" style="border-radius: 0.375rem 0 0 0.375rem;">
+                                    <option value="">選択してください</option>
+                                    {% for prd in prd_list %}
+                                    <option value="{{ prd.PRD_ID }}" {{ 'selected' if search_prd_id == prd.PRD_ID else '' }}>
+                                        {{ prd.PRD_ID }} - {{ prd.PRD_DSP_NM or prd.PRD_NAME or '' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <span class="input-group-text" style="border-radius: 0;">または</span>
+                                <input type="text" class="form-control" id="prd_id_input" name="prd_id" 
+                                       placeholder="製品IDを直接入力" maxlength="5" 
+                                       value="{{ search_prd_id or '' }}" 
+                                       style="border-radius: 0 0.375rem 0.375rem 0;">
+                            </div>
+                            <div class="form-text">製品IDを選択するか、直接入力してください（5文字以内）</div>
                         </div>
+                        <div class="col-md-2">
+                            <label for="cttl_col_nm" class="form-label">列名</label>
+                            <input type="text" class="form-control" id="cttl_col_nm" name="cttl_col_nm" 
+                                   value="{{ search_cttl_col_nm or '' }}" placeholder="部分一致検索" maxlength="20">
+                        </div>
+                                                 <div class="col-md-2">
+                             <label for="cttl_row_nm" class="form-label">行名</label>
+                             <input type="text" class="form-control" id="cttl_row_nm" name="cttl_row_nm" 
+                                    value="{{ search_cttl_row_nm or '' }}" placeholder="部分一致検索" maxlength="20">
+                         </div>
+                         <div class="col-md-1">
+                             <label for="cttl_col_key" class="form-label">列キー</label>
+                             <input type="number" class="form-control" id="cttl_col_key" name="cttl_col_key" 
+                                    value="{{ search_cttl_col_key or '' }}" placeholder="数値" min="0" max="99">
+                         </div>
+                         <div class="col-md-1">
+                             <label for="cttl_row_key" class="form-label">行キー</label>
+                             <input type="number" class="form-control" id="cttl_row_key" name="cttl_row_key" 
+                                    value="{{ search_cttl_row_key or '' }}" placeholder="数値" min="0" max="99">
+                         </div>
+                         <div class="col-md-2 d-flex align-items-end">
+                             <button type="submit" class="btn btn-primary me-2">
+                                 <i class="bi bi-search"></i> 検索
+                             </button>
+                             <a href="{{ url_for('total.cttl_list') }}" class="btn btn-secondary">
+                                 <i class="bi bi-arrow-clockwise"></i> リセット
+                             </a>
+                         </div>
                     </form>
                 </div>
             </div>
@@ -156,5 +195,34 @@ function confirmDelete(cttlId, cttlPrdId, cttlGNm) {
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
 }
+
+// 製品IDの選択と入力の連動
+const prdIdSelect = document.getElementById('prd_id_select');
+const prdIdInput = document.getElementById('prd_id_input');
+
+// セレクトボックスが変更されたとき、入力フィールドをクリア
+prdIdSelect.addEventListener('change', function() {
+    if (this.value) {
+        prdIdInput.value = '';
+    }
+});
+
+// 入力フィールドが変更されたとき、セレクトボックスをリセット
+prdIdInput.addEventListener('input', function() {
+    if (this.value) {
+        prdIdSelect.value = '';
+    }
+});
+
+// フォーム送信時の処理
+document.querySelector('form').addEventListener('submit', function(e) {
+    // 入力フィールドに値がある場合は、それを優先
+    if (prdIdInput.value.trim()) {
+        // 入力フィールドの値をそのまま使用
+    } else if (prdIdSelect.value) {
+        // セレクトボックスの値を入力フィールドに設定
+        prdIdInput.value = prdIdSelect.value;
+    }
+});
 </script>
 {% endblock %}

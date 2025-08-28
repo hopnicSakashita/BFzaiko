@@ -536,6 +536,11 @@ class CttlMstModel(Base):
     @staticmethod
     def get_all():
         """すべての在庫集計マスタデータを取得する"""
+        return CttlMstModel.search()
+    
+    @staticmethod
+    def search(cttl_id=None, prd_id=None, cttl_col_nm=None, cttl_row_nm=None, cttl_col_key=None, cttl_row_key=None):
+        """在庫集計マスタデータを検索する"""
         session = get_db_session()
         try:
             sql = text("""
@@ -550,10 +555,46 @@ class CttlMstModel(Base):
                     p.PRD_DSP_NM as PRD_NAME
                 FROM CTTL_MST c
                 LEFT OUTER JOIN PRD_MST p ON c.CTTL_PRD_ID = p.PRD_ID
-                ORDER BY c.CTTL_ID, c.CTTL_PRD_ID
+                WHERE 1=1
             """)
             
-            results = session.execute(sql).fetchall()
+            params = {}
+            
+            # 検索条件を適用
+            if cttl_id:
+                try:
+                    cttl_id_int = int(cttl_id)
+                    sql = text(str(sql) + " AND c.CTTL_ID = :cttl_id")
+                    params['cttl_id'] = cttl_id_int
+                except ValueError:
+                    # 数値変換できない場合は部分一致検索
+                    sql = text(str(sql) + " AND CAST(c.CTTL_ID AS VARCHAR) LIKE :cttl_id")
+                    params['cttl_id'] = f'%{cttl_id}%'
+            
+            if prd_id:
+                sql = text(str(sql) + " AND c.CTTL_PRD_ID LIKE :prd_id")
+                params['prd_id'] = f'%{prd_id}%'
+            
+            if cttl_col_nm:
+                sql = text(str(sql) + " AND c.CTTL_COL_NM LIKE :cttl_col_nm")
+                params['cttl_col_nm'] = f'%{cttl_col_nm}%'
+            
+            if cttl_row_nm:
+                sql = text(str(sql) + " AND c.CTTL_ROW_NM LIKE :cttl_row_nm")
+                params['cttl_row_nm'] = f'%{cttl_row_nm}%'
+            
+            if cttl_col_key is not None:
+                sql = text(str(sql) + " AND c.CTTL_COL_KEY = :cttl_col_key")
+                params['cttl_col_key'] = cttl_col_key
+            
+            if cttl_row_key is not None:
+                sql = text(str(sql) + " AND c.CTTL_ROW_KEY = :cttl_row_key")
+                params['cttl_row_key'] = cttl_row_key
+            
+            # 並び順を設定
+            sql = text(str(sql) + " ORDER BY c.CTTL_ID, c.CTTL_PRD_ID")
+            
+            results = session.execute(sql, params).fetchall()
             
             result = []
             for r in results:
