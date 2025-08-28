@@ -46,6 +46,18 @@
                                        value="{{ search_prd_monomer or '' }}" placeholder="部分一致検索" maxlength="30">
                             </div>
                             <div class="col-md-2">
+                                <label for="prd_kbn" class="form-label">商品分類</label>
+                                <select class="form-control" id="prd_kbn" name="prd_kbn">
+                                    <option value="">選択してください</option>
+                                    {% for value, label in HtmlConstants.PRD_KBN_DISPLAY.items() %}
+                                    <option value="{{ value }}" 
+                                            {{ 'selected' if search_prd_kbn == value|string else '' }}>
+                                        {{ value }} - {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <label for="lot" class="form-label">LOT</label>
                                 <input type="number" class="form-control" id="lot" name="lot" 
                                        value="{{ search_lot or '' }}" min="0" max="999999">
@@ -66,7 +78,7 @@
                                 <label for="stock_status" class="form-label">在庫状況</label>
                                 <select class="form-control" id="stock_status" name="stock_status">
                                     <option value="">全て</option>
-                                    <option value="1" {{ 'selected' if search_stock_status == '1' else '' }}>在庫あり</option>
+                                    <option value="1" {{ 'selected' if search_stock_status == '1' or search_stock_status == '' else '' }}>在庫あり</option>
                                     <option value="0" {{ 'selected' if search_stock_status == '0' else '' }}>在庫なし</option>
                                 </select>
                             </div>
