@@ -31,15 +31,15 @@ def csv_import_common():
     if request.method == 'POST':
         try:
             # アップロードされたファイルを取得
-            file = request.files.get('file')
+            file = request.files.get('csv_file')
             if not file or file.filename == '':
                 error_message = 'ファイルが選択されていません。'
-                return render_template('import_csv.html', error=error_message)
+                return render_template('common/csv_import_common.html', error=error_message)
             
             # CSVファイルかチェック
             if not file.filename.lower().endswith('.csv'):
                 error_message = 'CSVファイルを選択してください。'
-                return render_template('import_csv.html', error=error_message)
+                return render_template('common/csv_import_common.html', error=error_message)
             
             # ファイルサイズチェック（10MB制限）
             file.seek(0, 2)  # ファイル末尾に移動
@@ -48,7 +48,7 @@ def csv_import_common():
             
             if file_size > 10 * 1024 * 1024:  # 10MB
                 error_message = 'ファイルサイズが大きすぎます（10MB以下のファイルを選択してください）。'
-                return render_template('import_csv.html', error=error_message)
+                return render_template('common/csv_import_common.html', error=error_message)
             
             # CSVインポート処理
             # ファイルを一時保存
@@ -60,8 +60,11 @@ def csv_import_common():
             file.save(temp_path)
             
             try:
+                # ヘッダー行の有無を取得
+                has_header = 'has_header' in request.form
+                
                 # CSV取込処理を実行
-                result = import_csv_common(temp_path, has_header=False)
+                result = import_csv_common(temp_path, has_header=has_header)
                 
                 success_count = result['success']
                 error_count = result['error']
@@ -92,7 +95,7 @@ def csv_import_common():
             log_error("予期せぬエラーが発生しました", e)
             error_message = f"予期せぬエラーが発生しました: {str(e)}"
     
-    return render_template('import_csv.html', 
+    return render_template('common/csv_import_common.html', 
                          error=error_message, 
                          debug_info=[],
                          imported_data=None)
