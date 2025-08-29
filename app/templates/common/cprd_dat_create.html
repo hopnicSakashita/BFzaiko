@@ -155,16 +155,13 @@ document.getElementById('createForm').addEventListener('submit', function(e) {
         return;
     }
     
-    // マスタとの整合性チェック（入力フィールドの場合のみ）
-    if (prdIdInput.value.trim()) {
-        const prdList = {{ prd_list|tojson if prd_list else '[]' }};
-        const existingPrd = prdList.find(prd => prd.PRD_ID === prdId);
-        if (!existingPrd) {
-            if (!confirm(`製品ID "${prdId}" はマスタに登録されていません。\nこのまま登録しますか？`)) {
-                e.preventDefault();
-                return;
-            }
-        }
+    // マスタとの整合性チェック（マスタに存在しない製品IDは登録不可）
+    const prdList = {{ prd_list|tojson if prd_list else '[]' }};
+    const existingPrd = prdList.find(prd => prd.PRD_ID === prdId);
+    if (!existingPrd) {
+        alert(`製品ID "${prdId}" はマスタに登録されていません。\nマスタに登録されている製品IDを選択するか、直接入力してください。`);
+        e.preventDefault();
+        return;
     }
     
     if (isNaN(lot) || lot < 0 || lot > 999999) {

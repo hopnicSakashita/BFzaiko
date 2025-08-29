@@ -48,15 +48,15 @@
                     <table class="table table-bordered table-sm">
                         <thead class="table-dark">
                             <tr>
-                                <th style="min-width: 120px;">行名 / 列名</th>
+                                <th style="min-width: 80px;">行名 / 列名</th>
                                 {% set unique_col_keys = cttl_details | map(attribute='CTTL_COL_KEY') | unique | list | sort %}
                                 {% for col_key in unique_col_keys %}
                                     {% set col_detail = cttl_details | selectattr('CTTL_COL_KEY', 'equalto', col_key) | first %}
-                                    <th class="text-center" style="min-width: 150px;">
+                                    <th class="text-center" style="min-width: 80px;">
                                         {{ col_detail.CTTL_COL_NM or '未設定' }}
                                     </th>
                                 {% endfor %}
-                                <th class="text-center table-warning" style="min-width: 120px;">行合計</th>
+                                <th class="text-center table-warning" style="min-width: 80px;">行合計</th>
                             </tr>
                         </thead>
                         <tbody>
