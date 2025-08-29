@@ -592,7 +592,7 @@ class CttlMstModel(Base):
                 params['cttl_row_key'] = cttl_row_key
             
             # 並び順を設定
-            sql = text(str(sql) + " ORDER BY c.CTTL_ID, c.CTTL_PRD_ID")
+            sql = text(str(sql) + " ORDER BY c.CTTL_ID, c.CTTL_ROW_KEY, c.CTTL_COL_KEY, c.CTTL_PRD_ID")
             
             results = session.execute(sql, params).fetchall()
             
