@@ -19,7 +19,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('master_prd_list') }}" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="prd_kbn" class="form-label">商品分類</label>
                             <select class="form-select" id="prd_kbn" name="prd_kbn">
                                 {% for value, label in prd_kbn_choices %}
@@ -29,17 +29,22 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label for="prd_id" class="form-label">製品ID</label>
+                            <input type="text" class="form-control" id="prd_id" name="prd_id" 
+                                   value="{{ search_prd_id or '' }}" placeholder="部分一致検索" maxlength="5">
+                        </div>
+                        <div class="col-md-2">
                             <label for="prd_name" class="form-label">呼び名</label>
                             <input type="text" class="form-control" id="prd_name" name="prd_name" 
                                    value="{{ search_prd_name or '' }}" placeholder="部分一致検索">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="prd_film_color" class="form-label">膜カラー</label>
                             <input type="text" class="form-control" id="prd_film_color" name="prd_film_color" 
                                    value="{{ search_prd_film_color or '' }}" placeholder="部分一致検索">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="prd_monomer" class="form-label">モノマー</label>
                             <input type="text" class="form-control" id="prd_monomer" name="prd_monomer" 
                                    value="{{ search_prd_monomer or '' }}" placeholder="部分一致検索">

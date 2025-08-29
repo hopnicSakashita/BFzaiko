@@ -751,6 +751,7 @@ def master_prd_list():
         # 検索条件を取得
         prd_kbn = request.args.get('prd_kbn', '').strip()
         prd_flg = request.args.get('prd_flg')
+        prd_id = request.args.get('prd_id', '').strip()
         prd_name = request.args.get('prd_name', '').strip()
         prd_film_color = request.args.get('prd_film_color', '').strip()
         prd_monomer = request.args.get('prd_monomer', '').strip()
@@ -781,6 +782,10 @@ def master_prd_list():
                 params['prd_kbn'] = int(prd_kbn)
             
             # 部分一致検索条件を追加
+            if prd_id:
+                sql = text(str(sql) + " AND PRD_ID LIKE :prd_id")
+                params['prd_id'] = f'%{prd_id}%'
+            
             if prd_name:
                 sql = text(str(sql) + " AND PRD_NAME LIKE :prd_name")
                 params['prd_name'] = f'%{prd_name}%'
@@ -823,6 +828,7 @@ def master_prd_list():
                              prd_kbn_choices=prd_kbn_choices,
                              search_prd_kbn=prd_kbn,
                              prd_flg=prd_flg,
+                             search_prd_id=prd_id,
                              search_prd_name=prd_name,
                              search_prd_film_color=prd_film_color,
                              search_prd_monomer=prd_monomer)
